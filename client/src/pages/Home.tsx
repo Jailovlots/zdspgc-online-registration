@@ -13,7 +13,7 @@ export default function Home() {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="/assets/images/college-hero.png" 
+            src="/assets/images/school-prof.jpg" 
             alt="Campus" 
             className="w-full h-full object-cover"
           />

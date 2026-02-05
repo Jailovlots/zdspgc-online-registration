@@ -38,7 +38,7 @@ export default function Login() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-2">
             <Link href="/">
-              <img src="/assets/images/college-logo.png" alt="Logo" className="h-20 w-20 mx-auto cursor-pointer hover:scale-105 transition-transform" />
+              <img src="/assets/images/school-logo.jpg" alt="Logo" className="h-20 w-20 mx-auto cursor-pointer hover:scale-105 transition-transform" />
             </Link>
             <h1 className="text-3xl font-bold font-serif text-primary">ZDSPGC Portal</h1>
             <p className="text-muted-foreground">Sign in to your account or enroll online.</p>

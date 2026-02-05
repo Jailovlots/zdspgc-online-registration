@@ -8,10 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 const data = [
-  { name: "BSIT", total: 450 },
-  { name: "BSEd", total: 320 },
-  { name: "BSBa", total: 280 },
-  { name: "BSCrim", total: 390 },
+  { name: "BSIS", total: 450 },
+  { name: "BPED", total: 320 },
 ];
 
 export default function AdminDashboard() {
@@ -93,10 +91,8 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { name: "Maria Clara", course: "BSEd", status: "Pending", time: "2 hours ago" },
-                  { name: "Andres Bonifacio", course: "BSCrim", status: "Pending", time: "5 hours ago" },
-                  { name: "Emilio Aguinaldo", course: "BSBa", status: "Pending", time: "1 day ago" },
-                  { name: "Apolinario Mabini", course: "BSIT", status: "Pending", time: "1 day ago" },
+                  { name: "Maria Clara", course: "BPED", status: "Pending", time: "2 hours ago" },
+                  { name: "Apolinario Mabini", course: "BSIS", status: "Pending", time: "1 day ago" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
                     <div className="space-y-1">
