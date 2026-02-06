@@ -1,20 +1,31 @@
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { MOCK_STUDENTS, COURSES } from "@/lib/mock-data";
-import { AlertCircle, CheckCircle2, Clock, FileText, ArrowRight } from "lucide-react";
+import { COURSES } from "@/lib/mock-data";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { NewStudentDashboard } from "./NewStudentDashboard";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function StudentDashboard() {
-  // Mock logged in user
-  const student = MOCK_STUDENTS[0]; 
-  const course = COURSES.find(c => c.id === student.courseId);
+  const { user } = useAuth();
+  const student = (user as any)?.student;
+
+  // Use mock courses for now to lookup name, or should fetch it.
+  // Assuming student.courseId corresponds to mocked ids for now or we just don't show it if missing
+  const course = COURSES.find(c => c.id == student?.courseId);
+
+  if (!student) return null; // Should be handled by ProtectedRoute
+
+  // Redirect to new student dashboard if not enrolled or pending
+  if (student.status !== "enrolled") {
+    return <NewStudentDashboard student={student} />;
+  }
 
   return (
-    <StudentLayout>
+    <StudentLayout student={student}>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 font-serif">Dashboard</h1>
@@ -26,7 +37,7 @@ export default function StudentDashboard() {
           <CheckCircle2 className="h-5 w-5" />
           <AlertTitle className="font-semibold text-lg ml-2">You are officially enrolled!</AlertTitle>
           <AlertDescription className="ml-2 text-primary/80">
-             Your enrollment for the 1st Semester, A.Y. 2025-2026 has been approved. You can now view your schedule.
+            Your enrollment for the 1st Semester, A.Y. 2025-2026 has been approved. You can now view your schedule.
           </AlertDescription>
         </Alert>
 

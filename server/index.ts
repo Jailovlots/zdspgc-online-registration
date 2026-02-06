@@ -2,9 +2,33 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import session from "express-session";
+import passport from "passport";
+import MemoryStore from "memorystore";
+import { storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
+
+const SessionStore = MemoryStore(session);
+
+app.use(
+  session({
+    secret: "your-secret-key", // In production, use environment variable
+    resave: false,
+    saveUninitialized: false,
+    store: new SessionStore({
+      checkPeriod: 86400000,
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 declare module "http" {
   interface IncomingMessage {
@@ -60,6 +84,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await storage.seed();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

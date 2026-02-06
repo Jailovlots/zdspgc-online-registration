@@ -1,35 +1,72 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, loginMutation, registerMutation } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === "admin") setLocation("/admin/dashboard");
+      else setLocation("/student/dashboard");
+    }
+  }, [user, setLocation]);
+
+  // Login form state
+  const [loginForm, setLoginForm] = useState({
+    userType: "student", // 'student' | 'admin'
+    username: "",
+    password: "",
+  });
+
+  // Registration form state
+  const [registerForm, setRegisterForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
 
   // Parse query params properly
   const search = window.location.search;
   const params = new URLSearchParams(search);
   const defaultTab = params.get("tab") === "register" ? "register" : "login";
 
-  const handleLogin = (role: "student" | "admin") => {
-    setIsLoading(true);
-    // Simulate network request
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Login Successful",
-        description: `Welcome back, ${role === 'admin' ? 'Administrator' : 'Student'}!`,
-      });
-      setLocation(role === "admin" ? "/admin/dashboard" : "/student/dashboard");
-    }, 1500);
+  // Validation functions
+  const isRegisterFormValid =
+    registerForm.firstName.trim() !== "" &&
+    registerForm.lastName.trim() !== "" &&
+    registerForm.email.trim() !== "" &&
+    registerForm.password.trim() !== "";
+
+  const handleLoginSubmit = () => {
+    if (!loginForm.username.trim() || !loginForm.password.trim()) return;
+    loginMutation.mutate({ username: loginForm.username, password: loginForm.password });
   };
+
+  const handleRegisterSubmit = () => {
+    if (!isRegisterFormValid) return;
+
+    // Auto-generate student ID (mock) and default year level
+    const studentData = {
+      ...registerForm,
+      studentId: `2024-${Math.floor(1000 + Math.random() * 9000)}`,
+      yearLevel: 1,
+    };
+
+    registerMutation.mutate(studentData);
+  };
+
+  const isLoading = loginMutation.isPending || registerMutation.isPending;
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -55,34 +92,54 @@ export default function Login() {
                 <CardHeader>
                   <CardTitle>Sign In</CardTitle>
                   <CardDescription>
-                    Enter your ID number and password to access your portal.
+                    Select your user type to continue.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="id-number">ID Number / Username</Label>
-                    <Input id="id-number" placeholder="e.g. 2023-0001" />
+                  {/* User Type Selection */}
+                  <div className="flex p-1 bg-slate-100 rounded-lg mb-4">
+                    <button
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${loginForm.userType === 'student' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setLoginForm({ ...loginForm, userType: 'student' })}
+                    >
+                      Student
+                    </button>
+                    <button
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${loginForm.userType === 'admin' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setLoginForm({ ...loginForm, userType: 'admin' })}
+                    >
+                      Admin / Faculty
+                    </button>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="username">
+                      {loginForm.userType === 'student' ? 'Email Address' : 'Username'}
+                    </Label>
+                    <Input
+                      id="username"
+                      placeholder={loginForm.userType === 'student' ? 'juan@example.com' : 'admin'}
+                      value={loginForm.username}
+                      onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                      disabled={isLoading}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                      disabled={isLoading}
+                    />
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-4">
-                  <Button className="w-full bg-primary hover:bg-primary/90" onClick={() => handleLogin('student')} disabled={isLoading}>
+                <CardFooter>
+                  <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleLoginSubmit} disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In as Student
-                  </Button>
-                  <div className="relative w-full">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">Or</span>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full" onClick={() => handleLogin('admin')} disabled={isLoading}>
-                    Log in as Administrator
+                    {loginForm.userType === 'student' ? 'Access Student Portal' : 'Access Admin Dashboard'}
                   </Button>
                 </CardFooter>
               </Card>
@@ -100,24 +157,50 @@ export default function Login() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="first-name">First Name</Label>
-                      <Input id="first-name" placeholder="Juan" />
+                      <Input
+                        id="first-name"
+                        placeholder="Juan"
+                        value={registerForm.firstName}
+                        onChange={(e) => setRegisterForm({ ...registerForm, firstName: e.target.value })}
+                        disabled={isLoading}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="last-name">Last Name</Label>
-                      <Input id="last-name" placeholder="Dela Cruz" />
+                      <Input
+                        id="last-name"
+                        placeholder="Dela Cruz"
+                        value={registerForm.lastName}
+                        onChange={(e) => setRegisterForm({ ...registerForm, lastName: e.target.value })}
+                        disabled={isLoading}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" placeholder="juan@example.com" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="juan@example.com"
+                      value={registerForm.email}
+                      onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                      disabled={isLoading}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="new-password">Create Password</Label>
-                    <Input id="new-password" type="password" />
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={registerForm.password}
+                      onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                      disabled={isLoading}
+                    />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold" onClick={() => handleLogin('student')} disabled={isLoading}>
+                  <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold" onClick={handleRegisterSubmit} disabled={isLoading || !isRegisterFormValid}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Create Account & Start Enrollment
                   </Button>
                 </CardFooter>
@@ -130,9 +213,9 @@ export default function Login() {
       {/* Right Side - Image/Info */}
       <div className="hidden lg:flex flex-col relative bg-slate-900 text-white p-12 justify-between overflow-hidden">
         <div className="absolute inset-0 opacity-40">
-           <img 
-            src="/assets/images/college-hero.png" 
-            alt="Campus" 
+          <img
+            src="/assets/images/school-prof.jpg"
+            alt="Campus"
             className="w-full h-full object-cover grayscale"
           />
         </div>

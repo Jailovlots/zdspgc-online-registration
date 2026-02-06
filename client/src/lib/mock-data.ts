@@ -41,37 +41,52 @@ export const SUBJECTS: Subject[] = [
 ];
 
 export const MOCK_STUDENTS: Student[] = [
-  { 
-    id: "1", 
-    firstName: "Juan", 
-    lastName: "Dela Cruz", 
-    email: "juan@student.zdspgc.edu.ph", 
-    studentId: "2023-0001", 
-    courseId: "1", 
-    yearLevel: 2, 
+  {
+    id: "1",
+    firstName: "Juan",
+    lastName: "Dela Cruz",
+    email: "juan@student.zdspgc.edu.ph",
+    studentId: "2023-0001",
+    courseId: "1",
+    yearLevel: 2,
     status: "enrolled",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan"
   },
-  { 
-    id: "2", 
-    firstName: "Maria", 
-    lastName: "Clara", 
-    email: "maria@student.zdspgc.edu.ph", 
-    studentId: "2023-0002", 
-    courseId: "2", 
-    yearLevel: 1, 
+  {
+    id: "2",
+    firstName: "Maria",
+    lastName: "Clara",
+    email: "maria@student.zdspgc.edu.ph",
+    studentId: "2023-0002",
+    courseId: "2",
+    yearLevel: 1,
     status: "pending",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
   },
-  { 
-    id: "3", 
-    firstName: "Jose", 
-    lastName: "Rizal", 
-    email: "jose@student.zdspgc.edu.ph", 
-    studentId: "2023-0003", 
-    courseId: "1", 
-    yearLevel: 3, 
+  {
+    id: "3",
+    firstName: "Jose",
+    lastName: "Rizal",
+    email: "jose@student.zdspgc.edu.ph",
+    studentId: "2023-0003",
+    courseId: "1",
+    yearLevel: 3,
     status: "not-enrolled",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jose"
   },
 ];
+
+// Helper to get the current mock user across the application
+// Change the index here to switch users globally for testing
+// 0 = Enrolled (Juan)
+// 1 = Pending (Maria)
+// 2 = Not Enrolled (Jose)
+export const getCurrentUser = (): Student => {
+  return MOCK_STUDENTS[2];
+};
+
+export const ADMIN_CREDENTIALS = {
+  username: "admin",
+  password: "admin123",
+  name: "System Administrator"
+};
