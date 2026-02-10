@@ -46,7 +46,13 @@ export async function registerRoutes(
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
-      res.sendStatus(200);
+
+      // Destroy the session on logout and clear the cookie so client is fully logged out
+      req.session?.destroy((destroyErr) => {
+        if (destroyErr) return next(destroyErr);
+        res.clearCookie("connect.sid");
+        res.sendStatus(200);
+      });
     });
   });
 
@@ -64,6 +70,17 @@ export async function registerRoutes(
   });
 
   // Data Routes
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/debug/users", async (_req, res) => {
+      try {
+        const users = await storage.getAllUsers();
+        res.json(users.map(u => ({ id: u.id, username: u.username, role: u.role })));
+      } catch (err) {
+        res.status(500).json({ message: "debug failed" });
+      }
+    });
+  }
+
   app.get("/api/courses", async (_req, res) => {
     const courses = await storage.getCourses();
     res.json(courses);
@@ -71,8 +88,8 @@ export async function registerRoutes(
 
   app.get("/api/subjects", async (req, res) => {
     const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
-    // For now getSubjects ignores courseId but we pass it for future proofing
-    const subjects = await storage.getSubjects(courseId || 0);
+    const yearLevel = req.query.yearLevel ? parseInt(req.query.yearLevel as string) : undefined;
+    const subjects = await storage.getSubjects(courseId, yearLevel);
     res.json(subjects);
   });
 
@@ -112,6 +129,25 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ message: "Internal Server Error" });
       }
+    }
+  });
+
+  app.put("/api/students/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const id = parseInt(req.params.id, 10);
+    try {
+      // Only allow the owner student or admin to update
+      const user = req.user as any;
+      if (user.role !== "admin") {
+        const student = await storage.getStudent(id);
+        if (!student || student.userId !== user.id) return res.sendStatus(403);
+      }
+
+      const updated = await storage.updateStudent(id, req.body);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update student" });
     }
   });
 

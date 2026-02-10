@@ -5,6 +5,8 @@ import {
   subjects, type Subject,
   enrollments, type Enrollment
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -12,14 +14,16 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
 
   createStudent(userId: number, student: InsertStudent): Promise<Student>;
+  updateStudent(id: number, student: Partial<Student>): Promise<Student>;
   getStudent(id: number): Promise<Student | undefined>;
   getStudentByUserId(userId: number): Promise<Student | undefined>;
   getAllStudents(): Promise<Student[]>;
+  getAllUsers(): Promise<User[]>;
 
   getCourses(): Promise<Course[]>;
   getCourse(id: number): Promise<Course | undefined>;
 
-  getSubjects(courseId: number): Promise<Subject[]>;
+  getSubjects(courseId?: number, yearLevel?: number): Promise<Subject[]>;
 
   enrollStudent(studentId: number, subjectIds: number[]): Promise<void>;
   getStudentEnrollments(studentId: number): Promise<Enrollment[]>;
@@ -27,106 +31,118 @@ export interface IStorage {
   seed(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private students: Map<number, Student>;
-  private courses: Map<number, Course>;
-  private subjects: Map<number, Subject>;
-  private enrollments: Map<number, Enrollment>;
-  private currentId: { [key: string]: number };
-
-  constructor() {
-    this.users = new Map();
-    this.students = new Map();
-    this.courses = new Map();
-    this.subjects = new Map();
-    this.enrollments = new Map();
-    this.currentId = { users: 1, students: 1, courses: 1, subjects: 1, enrollments: 1 };
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username.toLowerCase() === username.toLowerCase(),
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId.users++;
-    const user: User = { ...insertUser, id, role: insertUser.role || "student" };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async createStudent(userId: number, insertStudent: InsertStudent): Promise<Student> {
-    const id = this.currentId.students++;
-    const student: Student = {
-      ...insertStudent,
-      id,
-      userId,
-      status: "pending",
-      courseId: insertStudent.courseId ?? null,
-      avatar: insertStudent.avatar ?? null,
-    };
-    this.students.set(id, student);
+    const [student] = await db
+      .insert(students)
+      .values({ ...insertStudent, userId })
+      .returning();
+    return student;
+  }
+
+  async updateStudent(id: number, studentUpdate: Partial<Student>): Promise<Student> {
+    const [student] = await db
+      .update(students)
+      .set(studentUpdate)
+      .where(eq(students.id, id))
+      .returning();
+
+    if (!student) throw new Error("Student not found");
     return student;
   }
 
   async getStudent(id: number): Promise<Student | undefined> {
-    return this.students.get(id);
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student;
   }
 
   async getStudentByUserId(userId: number): Promise<Student | undefined> {
-    return Array.from(this.students.values()).find(s => s.userId === userId);
+    const [student] = await db.select().from(students).where(eq(students.userId, userId));
+    return student;
   }
 
   async getAllStudents(): Promise<Student[]> {
-    return Array.from(this.students.values());
+    return await db.select().from(students);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async getCourses(): Promise<Course[]> {
-    return Array.from(this.courses.values());
+    return await db.select().from(courses);
   }
 
   async getCourse(id: number): Promise<Course | undefined> {
-    return this.courses.get(id);
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
   }
 
-  async getSubjects(courseId: number): Promise<Subject[]> {
-    // In a real app we might link subjects to courses via a join table or column
-    // For now we'll return all subjects or filter if we had a mapping
-    // Assuming subjects are general for now based on mock data
-    return Array.from(this.subjects.values());
+  async getSubjects(courseId?: number, yearLevel?: number): Promise<Subject[]> {
+    let q = db.select().from(subjects);
+
+    if (courseId && courseId > 0) {
+      q = q.where(eq(subjects.courseId, courseId));
+    }
+
+    if (yearLevel && yearLevel > 0) {
+      q = q.where(eq(subjects.yearLevel, yearLevel));
+    }
+
+    return await q;
   }
 
   async enrollStudent(studentId: number, subjectIds: number[]): Promise<void> {
     for (const subjectId of subjectIds) {
-      const id = this.currentId.enrollments++;
-      const enrollment: Enrollment = {
-        id,
+      await db.insert(enrollments).values({
         studentId,
         subjectId,
         status: "enrolled"
-      };
-      this.enrollments.set(id, enrollment);
+      });
     }
 
     // Auto-update student status to enrolled if not already
-    const student = this.students.get(studentId);
+    const [student] = await db.select().from(students).where(eq(students.id, studentId));
     if (student && student.status === "pending") {
-      this.students.set(studentId, { ...student, status: "enrolled" });
+      await db.update(students)
+        .set({ status: "enrolled" })
+        .where(eq(students.id, studentId));
     }
   }
 
   async getStudentEnrollments(studentId: number): Promise<Enrollment[]> {
-    return Array.from(this.enrollments.values()).filter(e => e.studentId === studentId);
+    return await db.select().from(enrollments).where(eq(enrollments.studentId, studentId));
   }
 
   async seed(): Promise<void> {
-    if (this.courses.size > 0) return; // Already seeded
+    const existingCourses = await db.select().from(courses).limit(1);
+
+    // Always ensure an admin user exists even if courses are already present.
+    const [existingAdmin] = await db.select().from(users).where(eq(users.username, "admin"));
+    if (!existingAdmin) {
+      await db.insert(users).values({
+        username: "admin",
+        password: "admin123", // In real app, hash this!
+        role: "admin"
+      });
+    }
+
+    if (existingCourses.length > 0) return; // Already seeded courses/subjects
 
     // Seed Courses
     const coursesData = [
@@ -134,35 +150,51 @@ export class MemStorage implements IStorage {
       { code: "BPED", name: "Bachelor of Physical Education", description: "Prepares students for teaching in schools." },
     ];
 
-    for (const c of coursesData) {
-      const id = this.currentId.courses++;
-      this.courses.set(id, { ...c, id });
+    await db.insert(courses).values(coursesData);
+
+    // fetch course ids so we can assign subjects to the right course
+    const courseRows = await db.select().from(courses);
+    const courseMap: Record<string, number> = {};
+    for (const c of courseRows) {
+      courseMap[c.code] = c.id as number;
     }
 
-    // Seed Subjects
+    // Seed Subjects (assign courseId for BSIS and BPED where appropriate)
     const subjectsData = [
-      { code: "IS 101", name: "Introduction to Computing", units: 3, schedule: "MWF 8:00-9:00 AM", instructor: "Prof. Santos" },
-      { code: "IS 102", name: "Computer Programming 1", units: 3, schedule: "TTh 9:00-10:30 AM", instructor: "Prof. Reyes" },
-      { code: "GE 1", name: "Understanding the Self", units: 3, schedule: "MWF 10:00-11:00 AM", instructor: "Prof. Dizon" },
-      { code: "GE 2", name: "Readings in Philippine History", units: 3, schedule: "TTh 1:00-2:30 PM", instructor: "Prof. Mercado" },
-      { code: "PE 1", name: "Physical Fitness and Gymnastics", units: 2, schedule: "Sat 8:00-10:00 AM", instructor: "Coach Cruz" },
-      { code: "NSTP 1", name: "ROTC 1", units: 3, schedule: "Sat 1:00-4:00 PM", instructor: "Mr. Garcia" },
+      // BSIS - 1st Year
+      { code: "IS 101", name: "Introduction to Computing", units: 3, schedule: "MWF 8:00-9:00 AM", instructor: "Prof. Santos", courseId: courseMap["BSIS"], yearLevel: 1 },
+      { code: "IS 102", name: "Computer Programming 1", units: 3, schedule: "TTh 9:00-10:30 AM", instructor: "Prof. Reyes", courseId: courseMap["BSIS"], yearLevel: 1 },
+      { code: "GE 1", name: "Understanding the Self", units: 3, schedule: "MWF 10:00-11:00 AM", instructor: "Prof. Dizon", courseId: courseMap["BSIS"], yearLevel: 1 },
+
+      // BSIS - 2nd Year
+      { code: "IS 201", name: "Data Structures", units: 3, schedule: "MWF 9:00-10:00 AM", instructor: "Prof. Tan", courseId: courseMap["BSIS"], yearLevel: 2 },
+      { code: "IS 202", name: "Database Systems", units: 3, schedule: "TTh 10:30-12:00 PM", instructor: "Prof. Cruz", courseId: courseMap["BSIS"], yearLevel: 2 },
+
+      // BSIS - 3rd Year
+      { code: "IS 301", name: "Operating Systems", units: 3, schedule: "MWF 1:00-2:00 PM", instructor: "Prof. Lopez", courseId: courseMap["BSIS"], yearLevel: 3 },
+      { code: "IS 302", name: "Software Engineering", units: 3, schedule: "TTh 2:30-4:00 PM", instructor: "Prof. Navarro", courseId: courseMap["BSIS"], yearLevel: 3 },
+
+      // BSIS - 4th Year
+      { code: "IS 401", name: "Information Systems Project", units: 6, schedule: "Varies", instructor: "Prof. Santos", courseId: courseMap["BSIS"], yearLevel: 4 },
+
+      // BPED - 1st Year
+      { code: "PE 101", name: "Physical Fitness and Gymnastics", units: 2, schedule: "Tue 8:00-10:00 AM", instructor: "Coach Cruz", courseId: courseMap["BPED"], yearLevel: 1 },
+      { code: "HE 101", name: "Educational Foundations", units: 3, schedule: "Thu 9:00-11:00 AM", instructor: "Prof. Reyes", courseId: courseMap["BPED"], yearLevel: 1 },
+
+      // BPED - 2nd Year
+      { code: "PE 201", name: "Rhythmic Activities", units: 2, schedule: "Wed 8:00-10:00 AM", instructor: "Coach Dela Cruz", courseId: courseMap["BPED"], yearLevel: 2 },
+
+      // BPED - 3rd Year
+      { code: "PE 301", name: "Team Sports Development", units: 3, schedule: "Mon 2:00-4:00 PM", instructor: "Coach Garcia", courseId: courseMap["BPED"], yearLevel: 3 },
+
+      // BPED - 4th Year
+      { code: "PE 401", name: "Curriculum and Planning in PE", units: 3, schedule: "Fri 10:00-12:00 PM", instructor: "Prof. Mendoza", courseId: courseMap["BPED"], yearLevel: 4 },
     ];
 
-    for (const s of subjectsData) {
-      const id = this.currentId.subjects++;
-      this.subjects.set(id, { ...s, id });
-    }
+    await db.insert(subjects).values(subjectsData);
 
-    // Seed Admin
-    const adminId = this.currentId.users++;
-    this.users.set(adminId, {
-      id: adminId,
-      username: "admin",
-      password: "admin123", // In real app, hash this!
-      role: "admin"
-    });
+    // admin seeding handled above
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

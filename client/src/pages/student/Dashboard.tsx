@@ -21,7 +21,7 @@ export default function StudentDashboard() {
 
   // Redirect to new student dashboard if not enrolled or pending
   if (student.status !== "enrolled") {
-    return <NewStudentDashboard student={student} />;
+    return <NewStudentDashboard />;
   }
 
   return (

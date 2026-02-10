@@ -21,6 +21,19 @@ export default function StudentRegistration() {
   const student = (user as any)?.student;
   const [step, setStep] = useState(1);
   const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedYear, setSelectedYear] = useState<string | null>(student?.yearLevel?.toString() ?? null);
+  // Extended student info fields
+  const [middleInitial, setMiddleInitial] = useState<string | undefined>(student?.middleInitial ?? "");
+  const [suffix, setSuffix] = useState<string | undefined>(student?.suffix ?? "");
+  const [dob, setDob] = useState<string | undefined>(student?.dob ?? "");
+  const [fatherName, setFatherName] = useState<string | undefined>(student?.fatherName ?? "");
+  const [fatherContact, setFatherContact] = useState<string | undefined>(student?.fatherContact ?? "");
+  const [motherName, setMotherName] = useState<string | undefined>(student?.motherName ?? "");
+  const [motherContact, setMotherContact] = useState<string | undefined>(student?.motherContact ?? "");
+  const [guardianName, setGuardianName] = useState<string | undefined>(student?.guardianName ?? "");
+  const [guardianContact, setGuardianContact] = useState<string | undefined>(student?.guardianContact ?? "");
+  const [previousSchool, setPreviousSchool] = useState<string | undefined>(student?.previousSchool ?? "");
+  const [yearGraduated, setYearGraduated] = useState<number | undefined>(student?.yearGraduated ?? undefined);
   const [enrolledSubjects, setEnrolledSubjects] = useState<number[]>([]); // Using IDs as numbers
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -30,8 +43,16 @@ export default function StudentRegistration() {
   });
 
   const { data: subjects } = useQuery<Subject[]>({
-    queryKey: ["/api/subjects", selectedCourse],
-    enabled: !!selectedCourse // Only fetch if course selected or maybe fetch all? API currently returns all if no ID
+    queryKey: ["/api/subjects", selectedCourse, selectedYear],
+    enabled: !!selectedCourse && !!selectedYear,
+    queryFn: async () => {
+      const courseId = parseInt(selectedCourse || "0", 10);
+      const year = selectedYear ? parseInt(selectedYear, 10) : undefined;
+      const url = `/api/subjects?courseId=${courseId}&yearLevel=${year ?? ""}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+      return await res.json();
+    }
   });
 
   const enrollMutation = useMutation({
@@ -55,8 +76,56 @@ export default function StudentRegistration() {
     }
   });
 
+  const updateStudentMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const id = student?.id;
+      if (!id) throw new Error("Student id not found");
+      const res = await fetch(`/api/students/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`Failed to update: ${res.status}`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Profile updated", description: "Your information has been saved." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    }
+  });
+
   const handleNext = () => setStep(step + 1);
   const handleBack = () => setStep(step - 1);
+
+  const handleSaveAndNext = async () => {
+    // Save student info on step 1
+    const payload: any = {
+      firstName: student?.firstName,
+      lastName: student?.lastName,
+      middleInitial,
+      suffix,
+      dob,
+      fatherName,
+      fatherContact,
+      motherName,
+      motherContact,
+      guardianName,
+      guardianContact,
+      previousSchool,
+      yearGraduated,
+    };
+
+    try {
+      await updateStudentMutation.mutateAsync(payload);
+      setStep(2);
+    } catch (err) {
+      // error handled in mutation
+    }
+  };
 
   const handleSubmit = () => {
     if (enrolledSubjects.length === 0) {
@@ -141,18 +210,78 @@ export default function StudentRegistration() {
                         <Input defaultValue={student.lastName || ""} disabled />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Address</Label>
-                      <Input defaultValue="Purok 1, Dimataling, Zamboanga Del Sur" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Middle Initial</Label>
+                        <Input value={middleInitial} onChange={(e) => setMiddleInitial((e.target as HTMLInputElement).value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Suffix</Label>
+                        <Input value={suffix} onChange={(e) => setSuffix((e.target as HTMLInputElement).value)} />
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Member Email</Label>
-                        <Input defaultValue={student.email} disabled />
+                        <Label>Date of Birth</Label>
+                        <Input type="date" value={dob} onChange={(e) => setDob((e.target as HTMLInputElement).value)} />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Previous School</Label>
+                        <Input value={previousSchool} onChange={(e) => setPreviousSchool((e.target as HTMLInputElement).value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Year Graduated</Label>
+                        <Input type="number" value={yearGraduated ?? ""} onChange={(e) => setYearGraduated(parseInt((e.target as HTMLInputElement).value || "0", 10) || undefined)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Current Guardian</Label>
+                        <Input value={guardianName} onChange={(e) => setGuardianName((e.target as HTMLInputElement).value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Guardian Contact</Label>
+                        <Input value={guardianContact} onChange={(e) => setGuardianContact((e.target as HTMLInputElement).value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Father's Name</Label>
+                        <Input value={fatherName} onChange={(e) => setFatherName((e.target as HTMLInputElement).value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Father Contact</Label>
+                        <Input value={fatherContact} onChange={(e) => setFatherContact((e.target as HTMLInputElement).value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Mother's Name</Label>
+                        <Input value={motherName} onChange={(e) => setMotherName((e.target as HTMLInputElement).value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Mother Contact</Label>
+                        <Input value={motherContact} onChange={(e) => setMotherContact((e.target as HTMLInputElement).value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Address</Label>
+                        <Input defaultValue="Purok 1, Dimataling, Zamboanga Del Sur" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Member Email</Label>
+                      <Input defaultValue={student.email} disabled />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Student ID</Label>
                         <Input defaultValue={student.studentId} disabled />
+                      </div>
+                      <div className="space-y-2">
+                        <Label></Label>
+                        <div />
                       </div>
                     </div>
                   </CardContent>
@@ -181,7 +310,7 @@ export default function StudentRegistration() {
                     </div>
                     <div className="space-y-2">
                       <Label>Year Level</Label>
-                      <Select defaultValue={student.yearLevel?.toString()}>
+                      <Select defaultValue={student.yearLevel?.toString()} onValueChange={(v) => setSelectedYear(v)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select year level..." />
                         </SelectTrigger>
@@ -297,7 +426,7 @@ export default function StudentRegistration() {
                 </Button>
 
                 {step < 4 ? (
-                  <Button onClick={handleNext}>
+                  <Button onClick={step === 1 ? handleSaveAndNext : handleNext}>
                     Next Step <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (

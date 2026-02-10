@@ -77,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         onSuccess: () => {
             queryClient.setQueryData(["/api/user"], null);
+            // ensure any cached user queries are invalidated (typed overload)
+            queryClient.invalidateQueries({ queryKey: ["/api/user"] });
             toast({
                 title: "Logged out",
                 description: "You have been logged out successfully.",

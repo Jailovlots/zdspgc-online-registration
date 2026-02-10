@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -17,6 +18,27 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const isActive = (path: string) => location === path;
+
+  function LogoutButton() {
+    const [_, setLocation] = useLocation();
+    const { logoutMutation } = useAuth();
+
+    const handleLogout = async () => {
+      try {
+        await logoutMutation.mutateAsync();
+        setLocation("/");
+      } catch (err) {
+        // swallow - toast handled in mutation
+      }
+    };
+
+    return (
+      <Button variant="ghost" onClick={handleLogout} className="w-full gap-2 text-destructive hover:bg-destructive/20 hover:text-destructive justify-start">
+        <LogOut className="h-4 w-4" />
+        Logout Admin
+      </Button>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-slate-50">
@@ -83,12 +105,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-950">
-          <Link href="/login">
-            <Button variant="ghost" className="w-full gap-2 text-destructive hover:bg-destructive/20 hover:text-destructive justify-start">
-              <LogOut className="h-4 w-4" />
-              Logout Admin
-            </Button>
-          </Link>
+          {/* Use same logout flow as student layout */}
+          <LogoutButton />
         </div>
       </aside>
 
