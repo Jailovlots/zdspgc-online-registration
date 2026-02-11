@@ -1,3 +1,6 @@
+// This file contains mock data types and constants for development
+// Note: Most data should be fetched from the API in production
+
 export interface Student {
   id: string;
   firstName: string;
@@ -7,7 +10,7 @@ export interface Student {
   courseId: string;
   yearLevel: number;
   status: "enrolled" | "pending" | "rejected" | "not-enrolled";
-  avatar: string;
+  avatar?: string;
 }
 
 export interface Course {
@@ -26,67 +29,3 @@ export interface Subject {
   instructor: string;
 }
 
-export const COURSES: Course[] = [
-  { id: "1", code: "BSIS", name: "Bachelor of Science in Information System", description: "Focuses on the study of computer utilization and software development." },
-  { id: "2", code: "BPED", name: "Bachelor of Physical Education", description: "Prepares students for teaching in schools." },
-];
-
-export const SUBJECTS: Subject[] = [
-  { id: "101", code: "IS 101", name: "Introduction to Computing", units: 3, schedule: "MWF 8:00-9:00 AM", instructor: "Prof. Santos" },
-  { id: "102", code: "IS 102", name: "Computer Programming 1", units: 3, schedule: "TTh 9:00-10:30 AM", instructor: "Prof. Reyes" },
-  { id: "103", code: "GE 1", name: "Understanding the Self", units: 3, schedule: "MWF 10:00-11:00 AM", instructor: "Prof. Dizon" },
-  { id: "104", code: "GE 2", name: "Readings in Philippine History", units: 3, schedule: "TTh 1:00-2:30 PM", instructor: "Prof. Mercado" },
-  { id: "105", code: "PE 1", name: "Physical Fitness and Gymnastics", units: 2, schedule: "Sat 8:00-10:00 AM", instructor: "Coach Cruz" },
-  { id: "106", code: "NSTP 1", name: "ROTC 1", units: 3, schedule: "Sat 1:00-4:00 PM", instructor: "Mr. Garcia" },
-];
-
-export const MOCK_STUDENTS: Student[] = [
-  {
-    id: "1",
-    firstName: "Juan",
-    lastName: "Dela Cruz",
-    email: "juan@student.zdspgc.edu.ph",
-    studentId: "2023-0001",
-    courseId: "1",
-    yearLevel: 2,
-    status: "enrolled",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan"
-  },
-  {
-    id: "2",
-    firstName: "Maria",
-    lastName: "Clara",
-    email: "maria@student.zdspgc.edu.ph",
-    studentId: "2023-0002",
-    courseId: "2",
-    yearLevel: 1,
-    status: "pending",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
-  },
-  {
-    id: "3",
-    firstName: "Jose",
-    lastName: "Rizal",
-    email: "jose@student.zdspgc.edu.ph",
-    studentId: "2023-0003",
-    courseId: "1",
-    yearLevel: 3,
-    status: "not-enrolled",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jose"
-  },
-];
-
-// Helper to get the current mock user across the application
-// Change the index here to switch users globally for testing
-// 0 = Enrolled (Juan)
-// 1 = Pending (Maria)
-// 2 = Not Enrolled (Jose)
-export const getCurrentUser = (): Student => {
-  return MOCK_STUDENTS[2];
-};
-
-export const ADMIN_CREDENTIALS = {
-  username: "admin",
-  password: "admin123",
-  name: "System Administrator"
-};

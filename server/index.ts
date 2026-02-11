@@ -30,6 +30,36 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// CORS support for the client dev server and Vite HMR.
+// Allows credentials (cookies) to be sent cross-origin during development.
+app.use((req, res, next) => {
+  const allowedOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5000";
+  const origin = req.headers.origin as string | undefined;
+  
+  // In development, be more permissive with CORS
+  if (process.env.NODE_ENV !== "production") {
+    if (origin && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+    }
+  } else {
+    // Production: strict CORS
+    if (origin && (allowedOrigin === "*" || origin === allowedOrigin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+    }
+  }
+  
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -84,9 +114,32 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await storage.seed();
+  try {
+    console.log("[Server] Starting up...");
+    await storage.seed();
+    console.log("[Server] Database seeded successfully");
+  } catch (error) {
+    console.error("[Server] Failed to seed database:", error);
+    console.error("[Server] Please ensure:");
+    console.error("  1. PostgreSQL is running");
+    console.error("  2. DATABASE_URL in .env is correct");
+    console.error("  3. Run: npm run db:push");
+    process.exit(1);
+  }
+  
   await registerRoutes(httpServer, app);
 
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (process.env.NODE_ENV === "production") {
+    serveStatic(app);
+  } else {
+    const { setupVite } = await import("./vite");
+    await setupVite(httpServer, app);
+  }
+
+  // Error handler must come AFTER all routes and Vite setup
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -99,16 +152,6 @@ app.use((req, res, next) => {
 
     return res.status(status).json({ message });
   });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

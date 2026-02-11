@@ -130,19 +130,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seed(): Promise<void> {
-    const existingCourses = await db.select().from(courses).limit(1);
+    try {
+      console.log("[Storage] Starting database seed...");
+      
+      const existingCourses = await db.select().from(courses).limit(1);
 
-    // Always ensure an admin user exists even if courses are already present.
-    const [existingAdmin] = await db.select().from(users).where(eq(users.username, "admin"));
-    if (!existingAdmin) {
-      await db.insert(users).values({
-        username: "admin",
-        password: "admin123", // In real app, hash this!
-        role: "admin"
-      });
-    }
+      // Always ensure an admin user exists even if courses are already present.
+      const [existingAdmin] = await db.select().from(users).where(eq(users.username, "admin"));
+      if (!existingAdmin) {
+        console.log("[Storage] Creating admin user...");
+        await db.insert(users).values({
+          username: "admin",
+          password: "admin123", // In real app, hash this!
+          role: "admin"
+        });
+        console.log("[Storage] Admin user created (username: admin, password: admin123)");
+      } else {
+        console.log("[Storage] Admin user already exists");
+      }
 
-    if (existingCourses.length > 0) return; // Already seeded courses/subjects
+      if (existingCourses.length > 0) {
+        console.log("[Storage] Courses already seeded, skipping...");
+        return; // Already seeded courses/subjects
+      }
 
     // Seed Courses
     const coursesData = [
@@ -193,7 +203,11 @@ export class DatabaseStorage implements IStorage {
 
     await db.insert(subjects).values(subjectsData);
 
-    // admin seeding handled above
+      console.log("[Storage] Database seed completed successfully");
+    } catch (error) {
+      console.error("[Storage] Database seed failed:", error);
+      throw error;
+    }
   }
 }
 

@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MOCK_STUDENTS, COURSES } from "@/lib/mock-data";
 import { Search, Eye, Check, X, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,17 @@ export default function StudentList() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredStudents = MOCK_STUDENTS.filter(student => 
+  // Fetch students from API
+  const { data: students = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/students"],
+  });
+
+  // Fetch courses for display
+  const { data: courses = [] } = useQuery<any[]>({
+    queryKey: ["/api/courses"],
+  });
+
+  const filteredStudents = students.filter((student: any) => 
     student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
     student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.studentId.includes(searchTerm)
@@ -64,8 +74,8 @@ export default function StudentList() {
             </TableHeader>
             <TableBody>
               {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => {
-                  const course = COURSES.find(c => c.id === student.courseId);
+                filteredStudents.map((student: any) => {
+                  const course = courses.find((c: any) => c.id === student.courseId);
                   return (
                     <TableRow key={student.id}>
                       <TableCell className="font-mono">{student.studentId}</TableCell>

@@ -40,6 +40,24 @@ export default function Login() {
   const search = window.location.search;
   const params = new URLSearchParams(search);
   const defaultTab = params.get("tab") === "register" ? "register" : "login";
+  
+  // Handler to reset forms when switching tabs
+  const handleTabChange = (value: string) => {
+    if (value === "login") {
+      setLoginForm({
+        userType: "student",
+        username: "",
+        password: "",
+      });
+    } else if (value === "register") {
+      setRegisterForm({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+      });
+    }
+  };
 
   // Validation functions
   const isRegisterFormValid =
@@ -81,7 +99,7 @@ export default function Login() {
             <p className="text-muted-foreground">Sign in to your account or enroll online.</p>
           </div>
 
-          <Tabs defaultValue={defaultTab} className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full" onValueChange={handleTabChange}>
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Registration</TabsTrigger>

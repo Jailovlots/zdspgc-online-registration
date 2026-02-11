@@ -14,12 +14,20 @@ export async function registerRoutes(
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`[Auth] Attempting login for: ${username}`);
         const user = await storage.getUserByUsername(username);
-        if (!user || user.password !== password) { // In real app, compare hashed password
+        if (!user) {
+          console.log(`[Auth] User not found: ${username}`);
           return done(null, false, { message: "Invalid credentials" });
         }
+        if (user.password !== password) {
+          console.log(`[Auth] Password mismatch for: ${username}`);
+          return done(null, false, { message: "Invalid credentials" });
+        }
+        console.log(`[Auth] Login successful for: ${username}`);
         return done(null, user);
       } catch (err) {
+        console.error(`[Auth] Error during authentication:`, err);
         return done(err);
       }
     })
@@ -39,8 +47,21 @@ export async function registerRoutes(
   });
 
   // Auth Routes
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          return next(loginErr);
+        }
+        return res.json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -70,11 +91,21 @@ export async function registerRoutes(
   });
 
   // Data Routes
+  // Dev-only: debug endpoints for testing
   if (process.env.NODE_ENV !== "production") {
     app.get("/api/debug/users", async (_req, res) => {
       try {
         const users = await storage.getAllUsers();
         res.json(users.map(u => ({ id: u.id, username: u.username, role: u.role })));
+      } catch (err) {
+        res.status(500).json({ message: "debug failed" });
+      }
+    });
+
+    app.get("/api/debug/users/with-password", async (_req, res) => {
+      try {
+        const users = await storage.getAllUsers();
+        res.json(users.map(u => ({ id: u.id, username: u.username, password: (u as any).password, role: u.role })));
       } catch (err) {
         res.status(500).json({ message: "debug failed" });
       }
@@ -95,6 +126,7 @@ export async function registerRoutes(
 
   app.post("/api/students", async (req, res) => {
     try {
+      console.log("[Registration] New registration attempt:", req.body.email);
       // Combined registration: User + Student
       // 1. Create User
       const userData = insertUserSchema.parse({
@@ -105,10 +137,12 @@ export async function registerRoutes(
 
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
+        console.log("[Registration] Email already registered:", userData.username);
         return res.status(400).json({ message: "Email already registered" });
       }
 
       const user = await storage.createUser(userData);
+      console.log("[Registration] User created:", user.id);
 
       // 2. Create Student
       const studentData = insertStudentSchema.parse({
@@ -117,13 +151,19 @@ export async function registerRoutes(
       });
 
       const student = await storage.createStudent(user.id, studentData);
+      console.log("[Registration] Student profile created:", student.id);
 
       // Auto login after registration
       req.login(user, (err) => {
-        if (err) throw err;
+        if (err) {
+          console.error("[Registration] Auto-login failed:", err);
+          throw err;
+        }
+        console.log("[Registration] Successful registration and login for:", user.username);
         res.status(201).json({ ...user, student });
       });
     } catch (error) {
+      console.error("[Registration] Error:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json(error.issues);
       } else {

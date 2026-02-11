@@ -3,19 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { COURSES } from "@/lib/mock-data";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { NewStudentDashboard } from "./NewStudentDashboard";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const student = (user as any)?.student;
 
-  // Use mock courses for now to lookup name, or should fetch it.
-  // Assuming student.courseId corresponds to mocked ids for now or we just don't show it if missing
-  const course = COURSES.find(c => c.id == student?.courseId);
+  // Fetch courses from API
+  const { data: courses = [] } = useQuery<any[]>({
+    queryKey: ["/api/courses"],
+  });
+
+  // Find the student's course
+  const course = courses.find((c: any) => c.id == student?.courseId);
 
   if (!student) return null; // Should be handled by ProtectedRoute
 
