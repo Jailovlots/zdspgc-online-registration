@@ -5,11 +5,16 @@ dotenv.config();
 
 const databaseUrl = process.env.DATABASE_URL;
 
+if (!databaseUrl) {
+  console.warn("DATABASE_URL is not set. Falling back to SQLite.");
+}
+
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
-  dialect: databaseUrl ? "postgresql" : "sqlite",
+  dialect: "postgresql",
   dbCredentials: {
-    url: databaseUrl || "./sqlite.db",
+    url: databaseUrl || "",
   },
 });
+
