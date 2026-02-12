@@ -68,6 +68,7 @@ export default function Login() {
 
   const handleLoginSubmit = () => {
     if (!loginForm.username.trim() || !loginForm.password.trim()) return;
+    console.log("[Login] Attempting login with:", { username: loginForm.username, userType: loginForm.userType });
     loginMutation.mutate({ username: loginForm.username, password: loginForm.password });
   };
 
@@ -81,6 +82,7 @@ export default function Login() {
       yearLevel: 1,
     };
 
+    console.log("[Login] Attempting registration with:", { email: studentData.email, firstName: studentData.firstName });
     registerMutation.mutate(studentData);
   };
 

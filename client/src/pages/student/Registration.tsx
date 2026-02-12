@@ -14,26 +14,57 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Course, Subject } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { AdmissionForm } from "@/components/AdmissionForm";
 
 export default function StudentRegistration() {
   const { toast } = useToast();
   const { user } = useAuth();
   const student = (user as any)?.student;
   const [step, setStep] = useState(1);
-  const [selectedCourse, setSelectedCourse] = useState("");
-  const [selectedYear, setSelectedYear] = useState<string | null>(student?.yearLevel?.toString() ?? null);
-  // Extended student info fields
-  const [middleInitial, setMiddleInitial] = useState<string | undefined>(student?.middleInitial ?? "");
-  const [suffix, setSuffix] = useState<string | undefined>(student?.suffix ?? "");
-  const [dob, setDob] = useState<string | undefined>(student?.dob ?? "");
+  const [sex, setSex] = useState<string | undefined>(student?.sex ?? "");
+  const [civilStatus, setCivilStatus] = useState<string | undefined>(student?.civilStatus ?? "");
+  const [placeOfBirth, setPlaceOfBirth] = useState<string | undefined>(student?.placeOfBirth ?? "");
+  const [citizenship, setCitizenship] = useState<string | undefined>(student?.citizenship ?? "");
+  const [religion, setReligion] = useState<string | undefined>(student?.religion ?? "");
+  const [permanentAddress, setPermanentAddress] = useState<string | undefined>(student?.permanentAddress ?? "");
+  const [postalCode, setPostalCode] = useState<string | undefined>(student?.postalCode ?? "");
+
   const [fatherName, setFatherName] = useState<string | undefined>(student?.fatherName ?? "");
   const [fatherContact, setFatherContact] = useState<string | undefined>(student?.fatherContact ?? "");
+  const [fatherOccupation, setFatherOccupation] = useState<string | undefined>(student?.fatherOccupation ?? "");
+  const [fatherCompany, setFatherCompany] = useState<string | undefined>(student?.fatherCompany ?? "");
+  const [fatherHomeAddress, setFatherHomeAddress] = useState<string | undefined>(student?.fatherHomeAddress ?? "");
+
   const [motherName, setMotherName] = useState<string | undefined>(student?.motherName ?? "");
   const [motherContact, setMotherContact] = useState<string | undefined>(student?.motherContact ?? "");
+  const [motherOccupation, setMotherOccupation] = useState<string | undefined>(student?.motherOccupation ?? "");
+  const [motherCompany, setMotherCompany] = useState<string | undefined>(student?.motherCompany ?? "");
+  const [motherHomeAddress, setMotherHomeAddress] = useState<string | undefined>(student?.motherHomeAddress ?? "");
+
   const [guardianName, setGuardianName] = useState<string | undefined>(student?.guardianName ?? "");
   const [guardianContact, setGuardianContact] = useState<string | undefined>(student?.guardianContact ?? "");
+  const [guardianRelationship, setGuardianRelationship] = useState<string | undefined>(student?.guardianRelationship ?? "");
+  const [guardianOccupation, setGuardianOccupation] = useState<string | undefined>(student?.guardianOccupation ?? "");
+  const [guardianCompany, setGuardianCompany] = useState<string | undefined>(student?.guardianCompany ?? "");
+  const [guardianHomeAddress, setGuardianHomeAddress] = useState<string | undefined>(student?.guardianHomeAddress ?? "");
+
+  const [emergencyContactPerson, setEmergencyContactPerson] = useState<string | undefined>(student?.emergencyContactPerson ?? "");
+  const [emergencyContactHome, setEmergencyContactHome] = useState<string | undefined>(student?.emergencyContactHome ?? "");
+  const [emergencyContactNumber, setEmergencyContactNumber] = useState<string | undefined>(student?.emergencyContactNumber ?? "");
+
+  const [elementarySchool, setElementarySchool] = useState<string | undefined>(student?.elementarySchool ?? "");
+  const [elementaryAddress, setElementaryAddress] = useState<string | undefined>(student?.elementaryAddress ?? "");
+  const [elementaryYearGraduated, setElementaryYearGraduated] = useState<number | undefined>(student?.elementaryYearGraduated ?? 0);
+  const [juniorHighSchool, setJuniorHighSchool] = useState<string | undefined>(student?.juniorHighSchool ?? "");
+  const [juniorHighAddress, setJuniorHighAddress] = useState<string | undefined>(student?.juniorHighAddress ?? "");
+  const [juniorHighYearGraduated, setJuniorHighYearGraduated] = useState<number | undefined>(student?.juniorHighYearGraduated ?? 0);
+  const [seniorHighSchool, setSeniorHighSchool] = useState<string | undefined>(student?.seniorHighSchool ?? "");
+  const [seniorHighAddress, setSeniorHighAddress] = useState<string | undefined>(student?.seniorHighAddress ?? "");
+  const [seniorHighYearGraduated, setSeniorHighYearGraduated] = useState<number | undefined>(student?.seniorHighYearGraduated ?? 0);
+
   const [previousSchool, setPreviousSchool] = useState<string | undefined>(student?.previousSchool ?? "");
   const [yearGraduated, setYearGraduated] = useState<number | undefined>(student?.yearGraduated ?? undefined);
+  const [pledgeAccepted, setPledgeAccepted] = useState(false);
   const [enrolledSubjects, setEnrolledSubjects] = useState<number[]>([]); // Using IDs as numbers
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -102,6 +133,15 @@ export default function StudentRegistration() {
   const handleBack = () => setStep(step - 1);
 
   const handleSaveAndNext = async () => {
+    if (!pledgeAccepted) {
+      toast({
+        title: "Pledge Not Accepted",
+        description: "You must accept the student pledge to continue.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Save student info on step 1
     const payload: any = {
       firstName: student?.firstName,
@@ -109,12 +149,41 @@ export default function StudentRegistration() {
       middleInitial,
       suffix,
       dob,
+      sex,
+      civilStatus,
+      placeOfBirth,
+      citizenship,
+      religion,
+      permanentAddress,
+      postalCode,
       fatherName,
       fatherContact,
+      fatherOccupation,
+      fatherCompany,
+      fatherHomeAddress,
       motherName,
       motherContact,
+      motherOccupation,
+      motherCompany,
+      motherHomeAddress,
       guardianName,
       guardianContact,
+      guardianRelationship,
+      guardianOccupation,
+      guardianCompany,
+      guardianHomeAddress,
+      emergencyContactPerson,
+      emergencyContactHome,
+      emergencyContactNumber,
+      elementarySchool,
+      elementaryAddress,
+      elementaryYearGraduated,
+      juniorHighSchool,
+      juniorHighAddress,
+      juniorHighYearGraduated,
+      seniorHighSchool,
+      seniorHighAddress,
+      seniorHighYearGraduated,
       previousSchool,
       yearGraduated,
     };
@@ -196,94 +265,99 @@ export default function StudentRegistration() {
               {step === 1 && (
                 <>
                   <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
-                    <CardTitle>Step 1: Student Information</CardTitle>
-                    <CardDescription>Update your personal details and contact information.</CardDescription>
+                    <CardTitle>Step 1: Student Admission Record</CardTitle>
+                    <CardDescription>Please fill out the comprehensive admission form. It is designed to match the school's official paper format.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4 pt-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>First Name</Label>
-                        <Input defaultValue={student.firstName || ""} disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Last Name</Label>
-                        <Input defaultValue={student.lastName || ""} disabled />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Middle Initial</Label>
-                        <Input value={middleInitial} onChange={(e) => setMiddleInitial((e.target as HTMLInputElement).value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Suffix</Label>
-                        <Input value={suffix} onChange={(e) => setSuffix((e.target as HTMLInputElement).value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Date of Birth</Label>
-                        <Input type="date" value={dob} onChange={(e) => setDob((e.target as HTMLInputElement).value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Previous School</Label>
-                        <Input value={previousSchool} onChange={(e) => setPreviousSchool((e.target as HTMLInputElement).value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Year Graduated</Label>
-                        <Input type="number" value={yearGraduated ?? ""} onChange={(e) => setYearGraduated(parseInt((e.target as HTMLInputElement).value || "0", 10) || undefined)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Current Guardian</Label>
-                        <Input value={guardianName} onChange={(e) => setGuardianName((e.target as HTMLInputElement).value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Guardian Contact</Label>
-                        <Input value={guardianContact} onChange={(e) => setGuardianContact((e.target as HTMLInputElement).value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Father's Name</Label>
-                        <Input value={fatherName} onChange={(e) => setFatherName((e.target as HTMLInputElement).value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Father Contact</Label>
-                        <Input value={fatherContact} onChange={(e) => setFatherContact((e.target as HTMLInputElement).value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Mother's Name</Label>
-                        <Input value={motherName} onChange={(e) => setMotherName((e.target as HTMLInputElement).value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Mother Contact</Label>
-                        <Input value={motherContact} onChange={(e) => setMotherContact((e.target as HTMLInputElement).value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Address</Label>
-                        <Input defaultValue="Purok 1, Dimataling, Zamboanga Del Sur" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Member Email</Label>
-                      <Input defaultValue={student.email} disabled />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Student ID</Label>
-                        <Input defaultValue={student.studentId} disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <Label></Label>
-                        <div />
-                      </div>
-                    </div>
+                  <CardContent className="pt-6 bg-slate-100/50 flex justify-center overflow-x-auto">
+                    <AdmissionForm
+                      pledgeAccepted={pledgeAccepted}
+                      onPledgeToggle={setPledgeAccepted}
+                      formData={{
+                        firstName: student.firstName,
+                        lastName: student.lastName,
+                        middleInitial,
+                        suffix,
+                        dob,
+                        sex,
+                        civilStatus,
+                        placeOfBirth,
+                        citizenship,
+                        religion,
+                        permanentAddress,
+                        postalCode,
+                        fatherName,
+                        fatherContact,
+                        fatherOccupation,
+                        fatherCompany,
+                        fatherHomeAddress,
+                        motherName,
+                        motherContact,
+                        motherOccupation,
+                        motherCompany,
+                        motherHomeAddress,
+                        guardianName,
+                        guardianContact,
+                        guardianRelationship,
+                        guardianOccupation,
+                        guardianCompany,
+                        guardianHomeAddress,
+                        emergencyContactPerson,
+                        emergencyContactHome,
+                        emergencyContactNumber,
+                        elementarySchool,
+                        elementaryAddress,
+                        elementaryYearGraduated,
+                        juniorHighSchool,
+                        juniorHighAddress,
+                        juniorHighYearGraduated,
+                        seniorHighSchool,
+                        seniorHighAddress,
+                        seniorHighYearGraduated,
+                      }}
+                      onChange={(field, value) => {
+                        const setters: Record<string, any> = {
+                          middleInitial: setMiddleInitial,
+                          suffix: setSuffix,
+                          dob: setDob,
+                          sex: setSex,
+                          civilStatus: setCivilStatus,
+                          placeOfBirth: setPlaceOfBirth,
+                          citizenship: setCitizenship,
+                          religion: setReligion,
+                          permanentAddress: setPermanentAddress,
+                          postalCode: setPostalCode,
+                          fatherName: setFatherName,
+                          fatherContact: setFatherContact,
+                          fatherOccupation: setFatherOccupation,
+                          fatherCompany: setFatherCompany,
+                          fatherHomeAddress: setFatherHomeAddress,
+                          motherName: setMotherName,
+                          motherContact: setMotherContact,
+                          motherOccupation: setMotherOccupation,
+                          motherCompany: setMotherCompany,
+                          motherHomeAddress: setMotherHomeAddress,
+                          guardianName: setGuardianName,
+                          guardianContact: setGuardianContact,
+                          guardianRelationship: setGuardianRelationship,
+                          guardianOccupation: setGuardianOccupation,
+                          guardianCompany: setGuardianCompany,
+                          guardianHomeAddress: setGuardianHomeAddress,
+                          emergencyContactPerson: setEmergencyContactPerson,
+                          emergencyContactHome: setEmergencyContactHome,
+                          emergencyContactNumber: setEmergencyContactNumber,
+                          elementarySchool: setElementarySchool,
+                          elementaryAddress: setElementaryAddress,
+                          elementaryYearGraduated: setElementaryYearGraduated,
+                          juniorHighSchool: setJuniorHighSchool,
+                          juniorHighAddress: setJuniorHighAddress,
+                          juniorHighYearGraduated: setJuniorHighYearGraduated,
+                          seniorHighSchool: setSeniorHighSchool,
+                          seniorHighAddress: setSeniorHighAddress,
+                          seniorHighYearGraduated: setSeniorHighYearGraduated,
+                        };
+                        if (setters[field]) setters[field](value);
+                      }}
+                    />
                   </CardContent>
                 </>
               )}

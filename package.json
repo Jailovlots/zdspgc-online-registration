@@ -10,7 +10,8 @@
     "start": "cross-env NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "db:setup": "tsx setup-database.ts"
+    "db:setup": "tsx setup-database.ts",
+    "diagnose": "tsx diagnose-login.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

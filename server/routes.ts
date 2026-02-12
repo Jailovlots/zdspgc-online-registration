@@ -10,6 +10,14 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  console.log("[Routes] Registering routes...");
+
+  // Test route to verify API is working
+  app.get("/api/test", (req, res) => {
+    console.log("[Routes] GET /api/test - API is working");
+    res.json({ message: "API is working", timestamp: new Date().toISOString() });
+  });
+
   // Auth Setup
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -48,6 +56,7 @@ export async function registerRoutes(
 
   // Auth Routes
   app.post("/api/login", (req, res, next) => {
+    console.log(`[Routes] POST /api/login - Body:`, req.body);
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return next(err);
@@ -225,5 +234,12 @@ export async function registerRoutes(
     res.json(enrollments);
   });
 
+  // 404 handler for API routes - must be after all other routes
+  app.use("/api/", (req, res) => {
+    console.log(`[Routes] 404 - API route not found: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ message: "API endpoint not found" });
+  });
+
+  console.log("[Routes] All routes registered");
   return httpServer;
 }

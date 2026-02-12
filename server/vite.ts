@@ -29,10 +29,22 @@ export async function setupVite(server: Server, app: Express) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
+  // Custom middleware to skip API routes for Vite
+  app.use((req, res, next) => {
+    if (req.url.startsWith("/api/")) {
+      // Skip Vite for API routes
+      return next();
+    }
+    // Let Vite handle non-API routes
+    vite.middlewares(req, res, next);
+  });
 
-  app.use("/{*path}", async (req, res, next) => {
-    const url = req.originalUrl;
+  // Catch-all route for client-side routing
+  app.use("/", async (req, res, next) => {
+    // Skip API routes
+    if (req.originalUrl.startsWith("/api/")) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(
@@ -48,7 +60,7 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await vite.transformIndexHtml(req.originalUrl, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);

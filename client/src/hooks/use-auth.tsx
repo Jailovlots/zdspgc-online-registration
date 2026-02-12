@@ -31,10 +31,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loginMutation = useMutation({
         mutationFn: async (credentials: Pick<InsertUser, "username" | "password">) => {
+            console.log("[Auth] Sending login request to /api/login");
             const res = await apiRequest("POST", "/api/login", credentials);
+            console.log("[Auth] Login response status:", res.status);
             return await res.json();
         },
         onSuccess: (user: User) => {
+            console.log("[Auth] Login successful:", user.username);
             queryClient.setQueryData(["/api/user"], user);
             toast({
                 title: "Login successful",
@@ -42,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
         },
         onError: (error: Error) => {
+            console.error("[Auth] Login failed:", error.message);
             toast({
                 title: "Login failed",
                 description: error.message,
@@ -52,10 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const registerMutation = useMutation({
         mutationFn: async (data: any) => {
+            console.log("[Auth] Sending registration request to /api/students");
             const res = await apiRequest("POST", "/api/students", data);
+            console.log("[Auth] Registration response status:", res.status);
             return await res.json();
         },
         onSuccess: (user: User) => {
+            console.log("[Auth] Registration successful:", user.username);
             queryClient.setQueryData(["/api/user"], user);
             toast({
                 title: "Registration successful",
@@ -63,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
         },
         onError: (error: Error) => {
+            console.error("[Auth] Registration failed:", error.message);
             toast({
                 title: "Registration failed",
                 description: error.message,

@@ -127,14 +127,18 @@ app.use((req, res, next) => {
     process.exit(1);
   }
   
+  console.log("[Server] Registering API routes...");
   await registerRoutes(httpServer, app);
+  console.log("[Server] API routes registered");
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
+    console.log("[Server] Setting up static file serving...");
     serveStatic(app);
   } else {
+    console.log("[Server] Setting up Vite middleware...");
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
