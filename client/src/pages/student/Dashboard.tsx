@@ -8,6 +8,8 @@ import { Link } from "wouter";
 import { NewStudentDashboard } from "./NewStudentDashboard";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { COE } from "@/components/COE";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -102,6 +104,20 @@ export default function StudentDashboard() {
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between bg-transparent text-white border-slate-700 hover:bg-slate-800 hover:text-white group">
+                    View Certificate of Enrollment (COE)
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Certificate of Enrollment</DialogTitle>
+                  </DialogHeader>
+                  <COE student={student} course={course} />
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         </div>

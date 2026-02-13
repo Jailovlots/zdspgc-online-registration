@@ -18,6 +18,8 @@ import StudentRegistration from "@/pages/student/Registration";
 // Admin Pages
 import AdminDashboard from "@/pages/admin/Dashboard";
 import StudentList from "@/pages/admin/StudentList";
+import CourseManagement from "@/pages/admin/CourseManagement";
+import Notifications from "@/pages/admin/Notifications";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType<any>, allowedRoles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -82,7 +84,10 @@ function Router() {
         {() => <ProtectedRoute component={StudentList} allowedRoles={["admin"]} />}
       </Route>
       <Route path="/admin/courses">
-        {() => <ProtectedRoute component={AdminDashboard} allowedRoles={["admin"]} />}
+        {() => <ProtectedRoute component={CourseManagement} allowedRoles={["admin"]} />}
+      </Route>
+      <Route path="/admin/notifications">
+        {() => <ProtectedRoute component={Notifications} allowedRoles={["admin"]} />}
       </Route>
 
       {/* Fallback to 404 */}

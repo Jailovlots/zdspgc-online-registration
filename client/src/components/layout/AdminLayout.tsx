@@ -2,13 +2,14 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  FileCheck, 
-  Settings, 
-  LogOut 
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  FileCheck,
+  Bell,
+  Settings,
+  LogOut
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -50,10 +51,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
         <div className="p-4 flex flex-col gap-1 flex-1">
           <div className="text-xs font-semibold text-slate-500 mb-2 px-2 uppercase tracking-wider">Management</div>
-          
+
           <Link href="/admin/dashboard">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={`w-full justify-start gap-3 ${isActive("/admin/dashboard") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
             >
               <LayoutDashboard className="h-4 w-4" />
@@ -62,8 +63,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
 
           <Link href="/admin/students">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={`w-full justify-start gap-3 ${isActive("/admin/students") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
             >
               <Users className="h-4 w-4" />
@@ -72,8 +73,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
 
           <Link href="/admin/enrollments">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={`w-full justify-start gap-3 ${isActive("/admin/enrollments") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
             >
               <FileCheck className="h-4 w-4" />
@@ -82,8 +83,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
 
           <Link href="/admin/courses">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={`w-full justify-start gap-3 ${isActive("/admin/courses") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
             >
               <BookOpen className="h-4 w-4" />
@@ -91,11 +92,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </Button>
           </Link>
 
+          <Link href="/admin/notifications">
+            <Button
+              variant="ghost"
+              className={`w-full justify-start gap-3 ${isActive("/admin/notifications") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
+            >
+              <Bell className="h-4 w-4" />
+              Notifications
+            </Button>
+          </Link>
+
           <div className="text-xs font-semibold text-slate-500 mt-6 mb-2 px-2 uppercase tracking-wider">System</div>
-          
+
           <Link href="/admin/settings">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className={`w-full justify-start gap-3 ${isActive("/admin/settings") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
             >
               <Settings className="h-4 w-4" />
@@ -113,9 +124,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
         <header className="h-16 bg-white border-b flex items-center justify-between px-6 sticky top-0 z-40">
           <h1 className="text-lg font-semibold text-slate-800">
-            {location === '/admin/dashboard' ? 'Overview' : 
-             location === '/admin/students' ? 'Student Records' : 
-             'Admin Console'}
+            {location === '/admin/dashboard' ? 'Overview' :
+              location === '/admin/students' ? 'Student Records' :
+                location === '/admin/enrollments' ? 'Enrollment Management' :
+                  location === '/admin/courses' ? 'Curriculum Management' :
+                    location === '/admin/notifications' ? 'Notifications' :
+                      'Admin Console'}
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-slate-600">Administrator</span>

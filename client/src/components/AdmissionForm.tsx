@@ -9,19 +9,25 @@ interface AdmissionFormProps {
     onChange: (field: string, value: any) => void;
     pledgeAccepted: boolean;
     onPledgeToggle: (checked: boolean) => void;
+    readOnly?: boolean;
 }
 
-export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeToggle }: AdmissionFormProps) {
+export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeToggle, readOnly = false }: AdmissionFormProps) {
     return (
         <div className="max-w-[850px] mx-auto bg-white shadow-2xl p-8 md:p-12 border border-slate-200 min-h-[1100px] font-sans">
             {/* Header */}
             <div className="text-center mb-10 border-b-2 border-slate-900 pb-6">
                 <div className="flex justify-center mb-4">
-                    <img src="/client/public/assets/images/school-logo.jpg" alt="ZDSPGC Logo" className="h-24 w-24 object-contain" />
+                    <img src="/assets/images/school-logo.jpg" alt="ZDSPGC Logo" className="h-24 w-24 object-contain" />
                 </div>
                 <h1 className="text-xl font-bold uppercase tracking-wider text-slate-900">Zamboanga Del Sur Provincial Government College</h1>
                 <p className="text-sm font-medium text-slate-700 mt-1">Dimataling Campus, Zamboanga Del Sur</p>
                 <h2 className="text-2xl font-black mt-6 bg-slate-900 text-white py-2 px-4 inline-block">Student Admission Record</h2>
+
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-md uppercase">
+                    IMPORTANT: PLEASE FILL OUT ALL REQUIRED INFORMATION. DO NOT LEAVE ANY ITEM BLANK.
+                    INDICATE "N/A" IF THE ITEM IS NOT APPLICABLE TO YOU.
+                </div>
             </div>
 
             <div className="space-y-8 text-black">
@@ -39,20 +45,20 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                         </div>
                         <div className="md:col-span-1 space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">M.I.</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.middleInitial || ""} onChange={(e) => onChange("middleInitial", e.target.value)} />
+                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.middleInitial || ""} onChange={(e) => onChange("middleInitial", e.target.value)} readOnly={readOnly} />
                         </div>
                         <div className="md:col-span-1 space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Suffix</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.suffix || ""} onChange={(e) => onChange("suffix", e.target.value)} />
+                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.suffix || ""} onChange={(e) => onChange("suffix", e.target.value)} readOnly={readOnly} />
                         </div>
 
                         <div className="md:col-span-2 space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Date of Birth</Label>
-                            <Input type="date" className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.dob || ""} onChange={(e) => onChange("dob", e.target.value)} />
+                            <Input type="date" className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.dob || ""} onChange={(e) => onChange("dob", e.target.value)} readOnly={readOnly} />
                         </div>
                         <div className="md:col-span-1 space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Sex</Label>
-                            <Select value={formData.sex} onValueChange={(v) => onChange("sex", v)}>
+                            <Select value={formData.sex} onValueChange={(v) => onChange("sex", v)} disabled={readOnly}>
                                 <SelectTrigger className="border-0 border-b border-slate-300 rounded-none px-0 h-8 flex items-center focus:ring-0 shadow-none bg-transparent">
                                     <SelectValue placeholder="Select" />
                                 </SelectTrigger>
@@ -64,7 +70,7 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                         </div>
                         <div className="md:col-span-1 space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Civil Status</Label>
-                            <Select value={formData.civilStatus} onValueChange={(v) => onChange("civilStatus", v)}>
+                            <Select value={formData.civilStatus} onValueChange={(v) => onChange("civilStatus", v)} disabled={readOnly}>
                                 <SelectTrigger className="border-0 border-b border-slate-300 rounded-none px-0 h-8 flex items-center focus:ring-0 shadow-none bg-transparent">
                                     <SelectValue placeholder="Select" />
                                 </SelectTrigger>
@@ -93,9 +99,14 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.postalCode || ""} onChange={(e) => onChange("postalCode", e.target.value)} />
                         </div>
 
+                        <div className="md:col-span-4 space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold text-slate-500">Contact Number</Label>
+                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.contactNumber || ""} onChange={(e) => onChange("contactNumber", e.target.value)} readOnly={readOnly} />
+                        </div>
+
                         <div className="md:col-span-6 space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Permanent Address</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.permanentAddress || ""} onChange={(e) => onChange("permanentAddress", e.target.value)} />
+                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.permanentAddress || ""} onChange={(e) => onChange("permanentAddress", e.target.value)} readOnly={readOnly} />
                         </div>
                     </div>
                 </section>
@@ -260,7 +271,7 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                 {/* Footer Info */}
                 <div className="pt-12 flex justify-between items-end border-t border-slate-200">
                     <div className="text-[10px] text-slate-400 uppercase font-mono">
-                        Form No. ZDSPGC-ADM-2025-001<br />
+                        Form No. -ADM-2025-001<br />
                         Revised: February 2026
                     </div>
                     <div className="text-right">

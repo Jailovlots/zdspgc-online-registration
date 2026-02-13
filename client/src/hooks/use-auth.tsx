@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useContext } from "react";
+import Swal from "sweetalert2";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type InsertUser, type User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -36,20 +37,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[Auth] Login response status:", res.status);
             return await res.json();
         },
-        onSuccess: (user: User) => {
+        onSuccess: (data: { user: User; token: string }) => {
+            const { user, token } = data;
             console.log("[Auth] Login successful:", user.username);
+            localStorage.setItem("token", token);
             queryClient.setQueryData(["/api/user"], user);
-            toast({
+            Swal.fire({
                 title: "Login successful",
-                description: `Welcome back, ${user.username}!`,
+                text: `Welcome back, ${user.username}!`,
+                icon: "success",
+                confirmButtonColor: "#0f172a",
+                timer: 2000,
+                showConfirmButton: false,
             });
         },
         onError: (error: Error) => {
             console.error("[Auth] Login failed:", error.message);
-            toast({
+            Swal.fire({
                 title: "Login failed",
-                description: error.message,
-                variant: "destructive",
+                text: error.message,
+                icon: "error",
+                confirmButtonColor: "#0f172a",
             });
         },
     });
@@ -61,35 +69,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[Auth] Registration response status:", res.status);
             return await res.json();
         },
-        onSuccess: (user: User) => {
+        onSuccess: (data: { user: User; token: string }) => {
+            const { user, token } = data;
             console.log("[Auth] Registration successful:", user.username);
+            localStorage.setItem("token", token);
             queryClient.setQueryData(["/api/user"], user);
-            toast({
+            Swal.fire({
                 title: "Registration successful",
-                description: "Your account has been created.",
+                text: "Your account has been created.",
+                icon: "success",
+                confirmButtonColor: "#0f172a",
+                timer: 2000,
+                showConfirmButton: false,
             });
         },
         onError: (error: Error) => {
             console.error("[Auth] Registration failed:", error.message);
-            toast({
+            Swal.fire({
                 title: "Registration failed",
-                description: error.message,
-                variant: "destructive",
+                text: error.message,
+                icon: "error",
+                confirmButtonColor: "#0f172a",
             });
         },
     });
 
     const logoutMutation = useMutation({
         mutationFn: async () => {
-            await apiRequest("POST", "/api/logout");
+            // No backend call needed for stateless JWT logout, but we can call it if needed
+            // await apiRequest("POST", "/api/logout");
         },
         onSuccess: () => {
+            localStorage.removeItem("token");
             queryClient.setQueryData(["/api/user"], null);
             // ensure any cached user queries are invalidated (typed overload)
             queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-            toast({
+            Swal.fire({
                 title: "Logged out",
-                description: "You have been logged out successfully.",
+                text: "You have been logged out successfully.",
+                icon: "success",
+                confirmButtonColor: "#0f172a",
+                timer: 2000,
+                showConfirmButton: false,
             });
         },
         onError: (error: Error) => {

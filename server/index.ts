@@ -6,9 +6,28 @@ import session from "express-session";
 import passport from "passport";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
+import helmet from "helmet";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Security and Performance Middleware
+app.use(helmet());
+app.use(compression());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { message: "Too many requests from this IP, please try again after 15 minutes" },
+});
+
+// Apply rate limiting to authentication routes
+app.use("/api/login", limiter);
+app.use("/api/register", limiter);
 
 const SessionStore = MemoryStore(session);
 
@@ -35,7 +54,7 @@ app.use(passport.session());
 app.use((req, res, next) => {
   const allowedOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5000";
   const origin = req.headers.origin as string | undefined;
-  
+
   // In development, be more permissive with CORS
   if (process.env.NODE_ENV !== "production") {
     if (origin && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
@@ -53,7 +72,7 @@ app.use((req, res, next) => {
       res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
     }
   }
-  
+
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
   }
@@ -126,7 +145,7 @@ app.use((req, res, next) => {
     console.error("  3. Run: npm run db:push");
     process.exit(1);
   }
-  
+
   console.log("[Server] Registering API routes...");
   await registerRoutes(httpServer, app);
   console.log("[Server] API routes registered");

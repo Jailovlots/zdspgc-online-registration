@@ -1,4 +1,5 @@
-import { pgTable, text, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, serial, timestamp, boolean, index, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,6 +8,10 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("student"), // student, admin
+}, (table) => {
+  return {
+    usernameIdx: index("username_idx").on(table.username),
+  };
 });
 
 export const courses = pgTable("courses", {
@@ -94,10 +99,20 @@ export const students = pgTable("students", {
   yearGraduated: integer("year_graduated").default(0),
 
   // Status and Documents
-  status: text("status").notNull().default("pending"), // enrolled, pending, rejected, not-enrolled
+  status: text("status").notNull().default("pending"), // enrolled, pending, rejected, not-enrolled, active, inactive, graduated
+  section: text("section").default(""), // e.g., 'Section A'
+  strand: text("strand").default(""), // for SHS students
+  contactNumber: text("contact_number").default(""),
   avatar: text("avatar"),
   form138: text("form138"),
   goodMoral: text("good_moral"),
+  psa: text("psa"),
+  diploma: text("diploma"),
+}, (table) => {
+  return {
+    emailIdx: index("email_idx").on(table.email),
+    studentIdIdx: index("student_id_idx").on(table.studentId),
+  };
 });
 
 export const enrollments = pgTable("enrollments", {
@@ -105,6 +120,24 @@ export const enrollments = pgTable("enrollments", {
   studentId: integer("student_id").notNull(),
   subjectId: integer("subject_id").notNull(),
   status: text("status").notNull().default("enrolled"),
+});
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // 'email' or 'sms'
+  subject: text("subject"),
+  message: text("message").notNull(),
+  status: text("status").notNull(), // 'sent', 'failed'
+  sentAt: timestamp("sent_at").defaultNow(),
+  sentBy: integer("sent_by").notNull(), // userId of admin
+});
+
+export const loginAttempts = pgTable("login_attempts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  attemptTime: timestamp("attempt_time").defaultNow(),
+  success: boolean("success").notNull(),
+  ipAddress: text("ip_address"),
 });
 
 export const insertUserSchema = createInsertSchema(users);
@@ -115,7 +148,9 @@ export const insertStudentSchema = createInsertSchema(students).omit({
   userId: true,
   status: true,
   form138: true,
-  goodMoral: true
+  goodMoral: true,
+  psa: true,
+  diploma: true
 }).extend({
   // Personal Information
   middleInitial: z.string().optional().default(""),
@@ -171,14 +206,25 @@ export const insertStudentSchema = createInsertSchema(students).omit({
   previousSchool: z.string().optional().default(""),
   yearGraduated: z.number().optional().default(0),
   courseId: z.number().optional(),
+  contactNumber: z.string().optional().default(""),
+  section: z.string().optional().default(""),
+  strand: z.string().optional().default(""),
 });
 export const insertEnrollmentSchema = createInsertSchema(enrollments);
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const insertLoginAttemptSchema = createInsertSchema(loginAttempts);
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Subject = typeof subjects.$inferSelect;
+export type InsertSubject = z.infer<typeof insertSubjectSchema>;
 export type Student = typeof students.$inferSelect;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Enrollment = typeof enrollments.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
 

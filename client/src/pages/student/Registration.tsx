@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, FileText, Check, ChevronRight, ChevronLeft, Clock } from "lucide-react";
+import { Loader2, Upload, FileText, Check, ChevronRight, ChevronLeft, Clock, BookOpen } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Course, Subject } from "@shared/schema";
@@ -28,6 +29,9 @@ export default function StudentRegistration() {
   const [religion, setReligion] = useState<string | undefined>(student?.religion ?? "");
   const [permanentAddress, setPermanentAddress] = useState<string | undefined>(student?.permanentAddress ?? "");
   const [postalCode, setPostalCode] = useState<string | undefined>(student?.postalCode ?? "");
+  const [middleInitial, setMiddleInitial] = useState<string | undefined>(student?.middleInitial ?? "");
+  const [suffix, setSuffix] = useState<string | undefined>(student?.suffix ?? "");
+  const [dob, setDob] = useState<string | undefined>(student?.dob ?? "");
 
   const [fatherName, setFatherName] = useState<string | undefined>(student?.fatherName ?? "");
   const [fatherContact, setFatherContact] = useState<string | undefined>(student?.fatherContact ?? "");
@@ -66,6 +70,8 @@ export default function StudentRegistration() {
   const [yearGraduated, setYearGraduated] = useState<number | undefined>(student?.yearGraduated ?? undefined);
   const [pledgeAccepted, setPledgeAccepted] = useState(false);
   const [enrolledSubjects, setEnrolledSubjects] = useState<number[]>([]); // Using IDs as numbers
+  const [selectedCourse, setSelectedCourse] = useState<string | undefined>(student?.courseId?.toString() ?? "");
+  const [selectedYear, setSelectedYear] = useState<string | undefined>(student?.yearLevel?.toString() ?? "");
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -86,23 +92,33 @@ export default function StudentRegistration() {
     }
   });
 
+  // Automatically select all subjects when they are loaded
+  useEffect(() => {
+    if (subjects && subjects.length > 0) {
+      setEnrolledSubjects(subjects.map(s => s.id));
+    }
+  }, [subjects]);
+
   const enrollMutation = useMutation({
     mutationFn: async (subjectIds: number[]) => {
       await apiRequest("POST", "/api/enroll", { subjectIds });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Refresh user to get updated status
-      toast({
+      Swal.fire({
         title: "Registration Submitted!",
-        description: "Your enrollment application has been sent to the registrar for approval.",
+        text: "Your enrollment application has been sent to the registrar for approval.",
+        icon: "success",
+        confirmButtonColor: "#0f172a",
       });
       setLocation("/student/dashboard");
     },
     onError: (error: Error) => {
-      toast({
+      Swal.fire({
         title: "Submission Failed",
-        description: error.message,
-        variant: "destructive",
+        text: error.message,
+        icon: "error",
+        confirmButtonColor: "#0f172a",
       });
     }
   });
@@ -134,57 +150,123 @@ export default function StudentRegistration() {
 
   const handleSaveAndNext = async () => {
     if (!pledgeAccepted) {
-      toast({
+      Swal.fire({
         title: "Pledge Not Accepted",
-        description: "You must accept the student pledge to continue.",
-        variant: "destructive"
+        text: "You must accept the student pledge to continue.",
+        icon: "warning",
+        confirmButtonColor: "#0f172a",
       });
       return;
     }
 
-    // Save student info on step 1
+    // List of fields to validate
+    const requiredFields: Record<string, string> = {
+      middleInitial: "Middle Initial (use N/A if none)",
+      suffix: "Suffix (use N/A if none)",
+      sex: "Sex",
+      civilStatus: "Civil Status",
+      placeOfBirth: "Place of Birth",
+      citizenship: "Citizenship",
+      religion: "Religion",
+      permanentAddress: "Permanent Address",
+      postalCode: "Postal Code",
+      fatherName: "Father's Name",
+      fatherContact: "Father's Contact",
+      fatherOccupation: "Father's Occupation",
+      fatherCompany: "Father's Company",
+      fatherHomeAddress: "Father's Home Address",
+      motherName: "Mother's Name",
+      motherContact: "Mother's Contact",
+      motherOccupation: "Mother's Occupation",
+      motherCompany: "Mother's Company",
+      motherHomeAddress: "Mother's Home Address",
+      guardianName: "Guardian's Name",
+      guardianContact: "Guardian's Contact",
+      guardianRelationship: "Guardian's Relationship",
+      guardianOccupation: "Guardian's Occupation",
+      guardianCompany: "Guardian's Company",
+      guardianHomeAddress: "Guardian's Home Address",
+      emergencyContactPerson: "Emergency Contact Person",
+      emergencyContactHome: "Emergency Contact Home Address",
+      emergencyContactNumber: "Emergency Contact Number",
+      elementarySchool: "Elementary School",
+      elementaryAddress: "Elementary School Address",
+      juniorHighSchool: "Junior High School",
+      juniorHighAddress: "Junior High School Address",
+      seniorHighSchool: "Senior High School",
+      seniorHighAddress: "Senior High School Address",
+    };
+
+    // Current values object for validation
+    const currentValues: Record<string, string | number | undefined> = {
+      middleInitial, suffix, sex, civilStatus, placeOfBirth, citizenship, religion,
+      permanentAddress, postalCode, fatherName, fatherContact, fatherOccupation,
+      fatherCompany, fatherHomeAddress, motherName, motherContact, motherOccupation,
+      motherCompany, motherHomeAddress, guardianName, guardianContact,
+      guardianRelationship, guardianOccupation, guardianCompany, guardianHomeAddress,
+      emergencyContactPerson, emergencyContactHome, emergencyContactNumber,
+      elementarySchool, elementaryAddress, juniorHighSchool, juniorHighAddress,
+      seniorHighSchool, seniorHighAddress,
+    };
+
+    const emptyFields = Object.keys(requiredFields).filter(key => {
+      const val = currentValues[key];
+      return val === undefined || val === null || val === "" || (typeof val === "number" && val === 0);
+    });
+
+    if (emptyFields.length > 0) {
+      Swal.fire({
+        title: "Missing Information",
+        text: `Please fill out: ${emptyFields.map(f => requiredFields[f]).join(", ")}. Use "N/A" if not applicable.`,
+        icon: "warning",
+        confirmButtonColor: "#0f172a",
+      });
+      return;
+    }
+
+    // Save student info on step 1 - FORCE UPPERCASE
     const payload: any = {
-      firstName: student?.firstName,
-      lastName: student?.lastName,
-      middleInitial,
-      suffix,
+      firstName: student?.firstName?.toUpperCase(),
+      lastName: student?.lastName?.toUpperCase(),
+      middleInitial: middleInitial?.toUpperCase(),
+      suffix: suffix?.toUpperCase(),
       dob,
       sex,
       civilStatus,
-      placeOfBirth,
-      citizenship,
-      religion,
-      permanentAddress,
-      postalCode,
-      fatherName,
-      fatherContact,
-      fatherOccupation,
-      fatherCompany,
-      fatherHomeAddress,
-      motherName,
-      motherContact,
-      motherOccupation,
-      motherCompany,
-      motherHomeAddress,
-      guardianName,
-      guardianContact,
-      guardianRelationship,
-      guardianOccupation,
-      guardianCompany,
-      guardianHomeAddress,
-      emergencyContactPerson,
-      emergencyContactHome,
-      emergencyContactNumber,
-      elementarySchool,
-      elementaryAddress,
+      placeOfBirth: placeOfBirth?.toUpperCase(),
+      citizenship: citizenship?.toUpperCase(),
+      religion: religion?.toUpperCase(),
+      permanentAddress: permanentAddress?.toUpperCase(),
+      postalCode: postalCode?.toUpperCase(),
+      fatherName: fatherName?.toUpperCase(),
+      fatherContact: fatherContact?.toUpperCase(),
+      fatherOccupation: fatherOccupation?.toUpperCase(),
+      fatherCompany: fatherCompany?.toUpperCase(),
+      fatherHomeAddress: fatherHomeAddress?.toUpperCase(),
+      motherName: motherName?.toUpperCase(),
+      motherContact: motherContact?.toUpperCase(),
+      motherOccupation: motherOccupation?.toUpperCase(),
+      motherCompany: motherCompany?.toUpperCase(),
+      motherHomeAddress: motherHomeAddress?.toUpperCase(),
+      guardianName: guardianName?.toUpperCase(),
+      guardianContact: guardianContact?.toUpperCase(),
+      guardianRelationship: guardianRelationship?.toUpperCase(),
+      guardianOccupation: guardianOccupation?.toUpperCase(),
+      guardianCompany: guardianCompany?.toUpperCase(),
+      guardianHomeAddress: guardianHomeAddress?.toUpperCase(),
+      emergencyContactPerson: emergencyContactPerson?.toUpperCase(),
+      emergencyContactHome: emergencyContactHome?.toUpperCase(),
+      emergencyContactNumber: emergencyContactNumber?.toUpperCase(),
+      elementarySchool: elementarySchool?.toUpperCase(),
+      elementaryAddress: elementaryAddress?.toUpperCase(),
       elementaryYearGraduated,
-      juniorHighSchool,
-      juniorHighAddress,
+      juniorHighSchool: juniorHighSchool?.toUpperCase(),
+      juniorHighAddress: juniorHighAddress?.toUpperCase(),
       juniorHighYearGraduated,
-      seniorHighSchool,
-      seniorHighAddress,
+      seniorHighSchool: seniorHighSchool?.toUpperCase(),
+      seniorHighAddress: seniorHighAddress?.toUpperCase(),
       seniorHighYearGraduated,
-      previousSchool,
+      previousSchool: previousSchool?.toUpperCase(),
       yearGraduated,
     };
 
@@ -198,10 +280,11 @@ export default function StudentRegistration() {
 
   const handleSubmit = () => {
     if (enrolledSubjects.length === 0) {
-      toast({
+      Swal.fire({
         title: "No Subjects Selected",
-        description: "Please select at least one subject to enroll.",
-        variant: "destructive"
+        text: "Please select at least one subject to enroll.",
+        icon: "info",
+        confirmButtonColor: "#0f172a",
       });
       return;
     }
@@ -408,10 +491,19 @@ export default function StudentRegistration() {
                 <>
                   <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
                     <CardTitle>Step 3: Subject Selection</CardTitle>
-                    <CardDescription>Select the subjects you want to enroll in.</CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <div className="border rounded-md">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-primary" />
+                        <h3 className="font-bold text-slate-800">
+                          Curriculum for {courses?.find(c => c.id.toString() === selectedCourse)?.code} -
+                          {selectedYear === "1" ? " 1st Year" : selectedYear === "2" ? " 2nd Year" : selectedYear === "3" ? " 3rd Year" : " 4th Year"}
+                        </h3>
+                      </div>
+                      <div className="text-xs text-muted-foreground italic">1st Semester, A.Y. 2025-2026</div>
+                    </div>
+                    <div className="border rounded-md shadow-sm overflow-hidden">
                       <div className="grid grid-cols-12 bg-slate-100 p-3 font-medium text-sm text-slate-700">
                         <div className="col-span-1"></div>
                         <div className="col-span-2">Code</div>
@@ -449,27 +541,63 @@ export default function StudentRegistration() {
                   </CardHeader>
                   <CardContent className="space-y-6 pt-6">
                     <div className="grid md:grid-cols-2 gap-6">
-                      <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-primary/50 transition-colors cursor-pointer">
-                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 text-blue-600">
-                          <FileText className="h-6 w-6" />
-                        </div>
-                        <h4 className="font-semibold">Form 138 / Report Card</h4>
-                        <p className="text-xs text-muted-foreground mt-1 mb-4">For Freshmen Only</p>
-                        <Button variant="outline" size="sm">
-                          <Upload className="mr-2 h-3 w-3" /> Select File
-                        </Button>
-                      </div>
+                      {[
+                        { id: "form138", label: "Form 138 / Report Card", description: "For Freshmen Only", iconColor: "bg-blue-100", textColor: "text-blue-600" },
+                        { id: "goodMoral", label: "Good Moral Certificate", description: "Required for all students", iconColor: "bg-purple-100", textColor: "text-purple-600" },
+                        { id: "psa", label: "PSA Birth Certificate", description: "Clear copy of original", iconColor: "bg-orange-100", textColor: "text-orange-600" },
+                        { id: "diploma", label: "Secondary Diploma", description: "High School Graduation", iconColor: "bg-green-100", textColor: "text-green-600" }
+                      ].map((doc) => (
+                        <div key={doc.id} className="border-2 border-dashed border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors relative">
+                          <div className={`h-12 w-12 rounded-full ${doc.iconColor} flex items-center justify-center mb-4 ${doc.textColor}`}>
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <h4 className="font-semibold">{doc.label}</h4>
+                          <p className="text-[10px] text-muted-foreground mt-1 mb-4">{doc.description}</p>
 
-                      <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-primary/50 transition-colors cursor-pointer">
-                        <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center mb-4 text-purple-600">
-                          <FileText className="h-6 w-6" />
+                          {(student as any)?.[doc.id] ? (
+                            <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full text-xs font-bold">
+                              <Check className="h-3 w-3" /> Uploaded
+                            </div>
+                          ) : (
+                            <div className="space-y-2 w-full">
+                              <input
+                                type="file"
+                                id={`upload-${doc.id}`}
+                                className="hidden"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+                                  formData.append("field", doc.id);
+
+                                  try {
+                                    const res = await fetch(`/api/students/${student.id}/upload`, {
+                                      method: "POST",
+                                      body: formData,
+                                    });
+                                    if (!res.ok) throw new Error("Upload failed");
+                                    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                                    toast({ title: "Upload Success", description: `${doc.label} has been uploaded.` });
+                                  } catch (err) {
+                                    toast({ title: "Upload Failed", description: "Could not upload file.", variant: "destructive" });
+                                  }
+                                }}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => document.getElementById(`upload-${doc.id}`)?.click()}
+                              >
+                                <Upload className="mr-2 h-3 w-3" /> Select File
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        <h4 className="font-semibold">Good Moral Certificate</h4>
-                        <p className="text-xs text-muted-foreground mt-1 mb-4">Required for all students</p>
-                        <Button variant="outline" size="sm">
-                          <Upload className="mr-2 h-3 w-3" /> Select File
-                        </Button>
-                      </div>
+                      ))}
                     </div>
 
                     <div className="flex items-start gap-3 p-4 bg-yellow-50 rounded-md border border-yellow-200">

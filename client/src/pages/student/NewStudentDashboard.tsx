@@ -18,7 +18,7 @@ export function NewStudentDashboard({ }: NewStudentDashboardProps) {
   if (!student) return null;
 
   const isPending = student.status === "pending";
-  const progress = isPending ? 66 : 0; // 0% for new, 66% for pending (demo logic)
+  const progress = student.status === "enrolled" ? 100 : (isPending ? 66 : 25);
 
   const steps = [
     { title: "Account Creation", status: "completed", description: "Your account has been created." },
