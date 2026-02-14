@@ -303,16 +303,22 @@ export class DatabaseStorage implements IStorage {
 
       // Always ensure an admin user exists even if courses are already present.
       const [existingAdmin] = await db.select().from(users).where(eq(users.username, "admin"));
+      const adminPassword = await import("./auth").then(m => m.hashPassword("admin123"));
+
       if (!existingAdmin) {
         console.log("[Storage] Creating admin user...");
         await db.insert(users).values({
           username: "admin",
-          password: "admin123", // In real app, hash this!
+          password: adminPassword,
           role: "admin"
         });
         console.log("[Storage] Admin user created (username: admin, password: admin123)");
       } else {
-        console.log("[Storage] Admin user already exists");
+        // Update admin password to ensure it's hashed correctly (fix for legacy plain text)
+        await db.update(users)
+          .set({ password: adminPassword })
+          .where(eq(users.username, "admin"));
+        console.log("[Storage] Admin user verified/updated");
       }
 
       if (existingCourses.length > 0) {

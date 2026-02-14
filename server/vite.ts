@@ -40,7 +40,7 @@ export async function setupVite(server: Server, app: Express) {
   });
 
   // Catch-all route for client-side routing
-  app.use("/", async (req, res, next) => {
+  app.use(async (req, res, next) => {
     // Skip API routes
     if (req.originalUrl.startsWith("/api/")) {
       return next();
