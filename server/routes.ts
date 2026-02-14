@@ -241,15 +241,9 @@ export async function registerRoutes(
       const student = await storage.createStudent(user.id, studentData);
       console.log("[Registration] Student profile created:", student.id);
 
-      // Auto login after registration
-      req.login(user, (err) => {
-        if (err) {
-          console.error("[Registration] Auto-login failed:", err);
-          throw err;
-        }
-        console.log("[Registration] Successful registration and login for:", user.username);
-        res.status(201).json({ ...user, student });
-      });
+      // Auto login after registration (JWT based)
+      console.log("[Registration] Successful registration for:", user.username);
+      res.status(201).json({ ...user, student });
     } catch (error) {
       console.error("[Registration] Error:", error);
       if (error instanceof z.ZodError) {

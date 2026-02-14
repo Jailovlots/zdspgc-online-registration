@@ -37,27 +37,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[Auth] Login response status:", res.status);
             return await res.json();
         },
-        onSuccess: (data: { user: User; token: string }) => {
-            const { user, token } = data;
+        onSuccess: (user: User) => {
             console.log("[Auth] Login successful:", user.username);
-            localStorage.setItem("token", token);
             queryClient.setQueryData(["/api/user"], user);
+            
+            // Show SweetAlert success
             Swal.fire({
-                title: "Login successful",
+                title: "Login Successful!",
                 text: `Welcome back, ${user.username}!`,
                 icon: "success",
-                confirmButtonColor: "#0f172a",
                 timer: 2000,
                 showConfirmButton: false,
+            });
+            
+            // Also show toast
+            toast({
+                title: "Login successful",
+                description: `Welcome back, ${user.username}!`,
             });
         },
         onError: (error: Error) => {
             console.error("[Auth] Login failed:", error.message);
+            
+            // Show SweetAlert error
             Swal.fire({
-                title: "Login failed",
+                title: "Login Failed",
                 text: error.message,
                 icon: "error",
+                confirmButtonText: "Try Again",
                 confirmButtonColor: "#0f172a",
+            });
+            
+            toast({
+                title: "Login failed",
+                description: error.message,
+                variant: "destructive",
             });
         },
     });
@@ -69,48 +83,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[Auth] Registration response status:", res.status);
             return await res.json();
         },
-        onSuccess: (data: { user: User; token: string }) => {
-            const { user, token } = data;
+        onSuccess: (user: User) => {
             console.log("[Auth] Registration successful:", user.username);
-            localStorage.setItem("token", token);
             queryClient.setQueryData(["/api/user"], user);
+            
+            // Show SweetAlert success
             Swal.fire({
-                title: "Registration successful",
-                text: "Your account has been created.",
+                title: "Registration Successful!",
+                text: "Your account has been created successfully.",
                 icon: "success",
-                confirmButtonColor: "#0f172a",
                 timer: 2000,
                 showConfirmButton: false,
+            });
+            
+            toast({
+                title: "Registration successful",
+                description: "Your account has been created.",
             });
         },
         onError: (error: Error) => {
             console.error("[Auth] Registration failed:", error.message);
+            
+            // Show SweetAlert error
             Swal.fire({
-                title: "Registration failed",
+                title: "Registration Failed",
                 text: error.message,
                 icon: "error",
+                confirmButtonText: "Try Again",
                 confirmButtonColor: "#0f172a",
+            });
+            
+            toast({
+                title: "Registration failed",
+                description: error.message,
+                variant: "destructive",
             });
         },
     });
 
     const logoutMutation = useMutation({
         mutationFn: async () => {
-            // No backend call needed for stateless JWT logout, but we can call it if needed
-            // await apiRequest("POST", "/api/logout");
+            await apiRequest("POST", "/api/logout");
         },
         onSuccess: () => {
-            localStorage.removeItem("token");
             queryClient.setQueryData(["/api/user"], null);
             // ensure any cached user queries are invalidated (typed overload)
             queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            
+            // Show SweetAlert success
             Swal.fire({
-                title: "Logged out",
+                title: "Logged Out",
                 text: "You have been logged out successfully.",
                 icon: "success",
-                confirmButtonColor: "#0f172a",
-                timer: 2000,
+                timer: 1500,
                 showConfirmButton: false,
+            });
+            
+            toast({
+                title: "Logged out",
+                description: "You have been logged out successfully.",
             });
         },
         onError: (error: Error) => {

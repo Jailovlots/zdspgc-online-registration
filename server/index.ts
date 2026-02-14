@@ -6,34 +6,26 @@ import session from "express-session";
 import passport from "passport";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
-import helmet from "helmet";
-import compression from "compression";
-import rateLimit from "express-rate-limit";
+
+// Catch unhandled errors during startup
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 const app = express();
 const httpServer = createServer(app);
-
-// Security and Performance Middleware
-app.use(helmet());
-app.use(compression());
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  message: { message: "Too many requests from this IP, please try again after 15 minutes" },
-});
-
-// Apply rate limiting to authentication routes
-app.use("/api/login", limiter);
-app.use("/api/register", limiter);
 
 const SessionStore = MemoryStore(session);
 
 app.use(
   session({
-    secret: "your-secret-key", // In production, use environment variable
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
     store: new SessionStore({
@@ -41,7 +33,9 @@ app.use(
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
     }
   })
 );
@@ -181,14 +175,25 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
+  
+  console.log(`[Server] Starting HTTP server on port ${port}...`);
+  
   httpServer.listen(
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);
+      console.log(`[Server] ✅ Server is running on port ${port}`);
     },
   );
+  
+  httpServer.on('error', (err: any) => {
+    console.error('[Server] HTTP Server Error:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Server] Port ${port} is already in use`);
+    }
+    process.exit(1);
+  });
 })();
