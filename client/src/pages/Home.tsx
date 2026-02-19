@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, GraduationCap, Users, BookOpen, CalendarCheck } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
+
 export default function Home() {
   return (
     <PublicLayout>
@@ -12,9 +13,9 @@ export default function Home() {
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src="/assets/images/school-prof.jpg" 
-            alt="Campus" 
+          <img
+            src="/assets/images/school-prof.jpg"
+            alt="Campus"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 to-slate-900/50" />
@@ -26,24 +27,22 @@ export default function Home() {
               Admissions Open for A.Y. 2025-2026
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-sm font-serif">
-              Excellence in Education, <br/>
+              Excellence in Education, <br />
               <span className="text-secondary">Service to the Community</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-200 mb-8 leading-relaxed max-w-2xl">
               Zamboanga Del Sur Provincial Government College – Dimataling Campus provides quality, affordable tertiary education to empower the youth and build future leaders.
             </p>
+
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Link href="/login?tab=register">
+              <Link href="/login">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-white text-lg px-8 h-14 rounded-md shadow-lg shadow-primary/20">
-                  Enroll Now
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  Student Portal
+                  <GraduationCap className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/about">
-                <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10 text-lg px-8 h-14 rounded-md">
-                  Learn More
-                </Button>
-              </Link>
+
             </div>
           </div>
         </div>
@@ -142,7 +141,7 @@ export default function Home() {
               <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Enrollment Schedule for 2nd Semester</h3>
               <p className="text-muted-foreground line-clamp-2">The Office of the Registrar announces the enrollment dates for the upcoming Second Semester, Academic Year 2025-2026.</p>
             </div>
-            
+
             <div className="group cursor-pointer">
               <div className="aspect-video bg-slate-200 rounded-lg mb-4 overflow-hidden relative">
                 <div className="w-full h-full bg-primary/5 flex items-center justify-center">
@@ -157,7 +156,7 @@ export default function Home() {
             </div>
 
             <div className="group cursor-pointer">
-               <div className="aspect-video bg-slate-200 rounded-lg mb-4 overflow-hidden relative">
+              <div className="aspect-video bg-slate-200 rounded-lg mb-4 overflow-hidden relative">
                 <div className="w-full h-full bg-secondary/5 flex items-center justify-center">
                   <GraduationCap className="h-12 w-12 text-secondary-foreground/40" />
                 </div>

@@ -7,23 +7,36 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 import Home from "@/pages/Home";
-import Login from "@/pages/Login";
+import Login from "@/pages/Login"; // Keep for reference if needed, but we use specific login pages
+import StudentLogin from "@/pages/student/Login";
+import AdminLogin from "@/pages/admin/Login";
 import Programs from "@/pages/Programs";
 import NotFound from "@/pages/not-found";
+import { useEffect } from "react";
 
 // Student Pages
 import StudentDashboard from "@/pages/student/Dashboard";
 import StudentRegistration from "@/pages/student/Registration";
+import StudentSettings from "./pages/student/Settings";
+import StudentSchedule from "@/pages/student/Schedule";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/Dashboard";
 import StudentList from "@/pages/admin/StudentList";
 import CourseManagement from "@/pages/admin/CourseManagement";
 import Notifications from "@/pages/admin/Notifications";
+import AdminSettings from "@/pages/admin/Settings";
+import AdminReports from "@/pages/admin/Reports";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType<any>, allowedRoles?: string[] }) {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
@@ -33,16 +46,10 @@ function ProtectedRoute({ component: Component, allowedRoles }: { component: Rea
     );
   }
 
-  if (!user) {
-    setLocation("/login");
-    return null;
-  }
+  if (!user) return null;
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect based on role if they try to access unauthorized page
-    if (user.role === "admin") setLocation("/admin/dashboard");
-    else setLocation("/student/dashboard");
-    return null;
+    return <NotFound />; // Or better handling, but avoiding side-effect in render
   }
 
   return <Component />;
@@ -53,24 +60,45 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/" component={Home} />
-      <Route path="/login" component={Login} />
       <Route path="/programs" component={Programs} />
 
+      {/* Legacy Login Redirect */}
+      {/* Unified Login Route */}
+      <Route path="/login" component={Login} />
+
+      {/* Legacy/Specific Login Routes - redirect to main login */}
+      <Route path="/student/login">
+        {() => {
+          const [, setLocation] = useLocation();
+          useEffect(() => setLocation("/login"), [setLocation]);
+          return null;
+        }}
+      </Route>
+      <Route path="/admin/login">
+        {() => {
+          const [, setLocation] = useLocation();
+          useEffect(() => setLocation("/login"), [setLocation]);
+          return null;
+        }}
+      </Route>
+
       {/* Student Routes */}
-      {/* Registration might be public or protected depending on flow, usually public for new students */}
       <Route path="/student/registration" component={StudentRegistration} />
 
       <Route path="/student/dashboard">
         {() => <ProtectedRoute component={StudentDashboard} allowedRoles={["student"]} />}
       </Route>
       <Route path="/student/schedule">
-        {() => <ProtectedRoute component={StudentDashboard} allowedRoles={["student"]} />}
+        {() => <ProtectedRoute component={StudentSchedule} allowedRoles={["student"]} />}
       </Route>
       <Route path="/student/grades">
         {() => <ProtectedRoute component={StudentDashboard} allowedRoles={["student"]} />}
       </Route>
       <Route path="/student/profile">
         {() => <ProtectedRoute component={StudentDashboard} allowedRoles={["student"]} />}
+      </Route>
+      <Route path="/student/settings">
+        {() => <ProtectedRoute component={StudentSettings} allowedRoles={["student"]} />}
       </Route>
 
       {/* Admin Routes */}
@@ -88,6 +116,12 @@ function Router() {
       </Route>
       <Route path="/admin/notifications">
         {() => <ProtectedRoute component={Notifications} allowedRoles={["admin"]} />}
+      </Route>
+      <Route path="/admin/settings">
+        {() => <ProtectedRoute component={AdminSettings} allowedRoles={["admin"]} />}
+      </Route>
+      <Route path="/admin/reports">
+        {() => <ProtectedRoute component={AdminReports} allowedRoles={["admin"]} />}
       </Route>
 
       {/* Fallback to 404 */}

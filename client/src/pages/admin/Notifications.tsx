@@ -292,8 +292,28 @@ export default function Notifications() {
 
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Search className="h-4 w-4" /> Quick Select
+                                <CardTitle className="text-lg flex items-center gap-2 justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Search className="h-4 w-4" /> Quick Select
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 text-xs"
+                                            onClick={() => setSelectedStudents("all")}
+                                        >
+                                            Select All
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 text-xs"
+                                            onClick={() => setSelectedStudents([])}
+                                        >
+                                            Clear
+                                        </Button>
+                                    </div>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -301,15 +321,35 @@ export default function Notifications() {
                                     {filteredStudents.length === 0 ? (
                                         <p className="text-sm text-center py-4 text-muted-foreground">No students match filters</p>
                                     ) : (
-                                        filteredStudents.map(student => (
-                                            <div key={student.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded text-sm group">
-                                                <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] uppercase">
-                                                    {student.firstName[0]}{student.lastName[0]}
+                                        filteredStudents.map(student => {
+                                            const isSelected = selectedStudents === "all" || selectedStudents.includes(student.id);
+                                            return (
+                                                <div
+                                                    key={student.id}
+                                                    onClick={() => {
+                                                        if (selectedStudents === "all") {
+                                                            // If all selected, switching to specific selection (deselecting this one)
+                                                            setSelectedStudents(filteredStudents.filter(s => s.id !== student.id).map(s => s.id));
+                                                        } else {
+                                                            if (selectedStudents.includes(student.id)) {
+                                                                setSelectedStudents(selectedStudents.filter(id => id !== student.id));
+                                                            } else {
+                                                                setSelectedStudents([...selectedStudents, student.id]);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className={`flex items-center gap-2 p-2 rounded text-sm group cursor-pointer transition-colors ${isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-slate-50 border border-transparent"
+                                                        }`}
+                                                >
+                                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] uppercase ${isSelected ? "bg-primary text-primary-foreground" : "bg-slate-200"
+                                                        }`}>
+                                                        {student.firstName[0]}{student.lastName[0]}
+                                                    </div>
+                                                    <span className="flex-1 truncate">{student.firstName} {student.lastName}</span>
+                                                    <Badge variant="outline" className="text-[10px] py-0 px-1">{student.status}</Badge>
                                                 </div>
-                                                <span className="flex-1 truncate">{student.firstName} {student.lastName}</span>
-                                                <Badge variant="outline" className="text-[10px] py-0 px-1">{student.status}</Badge>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </div>
                             </CardContent>

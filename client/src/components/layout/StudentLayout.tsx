@@ -76,12 +76,7 @@ export function StudentLayout({ children, student }: StudentLayoutProps) {
 
           <div className="text-xs font-semibold text-muted-foreground mt-6 mb-2 px-2 uppercase tracking-wider">Account</div>
 
-          <Link href="/student/profile">
-            <Button variant={isActive("/student/profile") ? "secondary" : "ghost"} className="w-full justify-start gap-3">
-              <User className="h-4 w-4" />
-              My Profile
-            </Button>
-          </Link>
+
 
           <Link href="/student/settings">
             <Button variant={isActive("/student/settings") ? "secondary" : "ghost"} className="w-full justify-start gap-3">

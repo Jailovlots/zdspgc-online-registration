@@ -6,6 +6,7 @@ import session from "express-session";
 import passport from "passport";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
+import { configurePassport } from "./passport-config";
 
 // Catch unhandled errors during startup
 process.on('uncaughtException', (err) => {
@@ -42,6 +43,9 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Configure Passport strategies and serialization
+configurePassport();
 
 // CORS support for the client dev server and Vite HMR.
 // Allows credentials (cookies) to be sent cross-origin during development.
@@ -175,9 +179,9 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  
+
   console.log(`[Server] Starting HTTP server on port ${port}...`);
-  
+
   httpServer.listen(
     {
       port,
@@ -188,7 +192,7 @@ app.use((req, res, next) => {
       console.log(`[Server] ✅ Server is running on port ${port}`);
     },
   );
-  
+
   httpServer.on('error', (err: any) => {
     console.error('[Server] HTTP Server Error:', err);
     if (err.code === 'EADDRINUSE') {

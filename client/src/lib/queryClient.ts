@@ -1,7 +1,13 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 // Allow overriding the API base when running the client dev server separately
-const API_BASE = (import.meta.env as any).VITE_API_URL || "";
+// In production, API calls go to the same origin
+declare global {
+  interface ImportMeta {
+    env: Record<string, string>;
+  }
+}
+const API_BASE = typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_API_URL || "" : "";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -16,16 +22,16 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const fullUrl = url.startsWith("/") && API_BASE ? `${API_BASE}${url}` : url;
-  const token = localStorage.getItem("token");
 
   const headers: Record<string, string> = {};
   if (data) headers["Content-Type"] = "application/json";
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Session-based auth - no token needed, cookies are sent automatically
 
   const res = await fetch(fullUrl, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
+    credentials: "include", // Important: sends cookies with request
   });
 
   await throwIfResNotOk(res);
@@ -40,10 +46,9 @@ export const getQueryFn: <T>(options: {
     async ({ queryKey }) => {
       const path = queryKey.join("/") as string;
       const fullUrl = path.startsWith("/") && API_BASE ? `${API_BASE}${path}` : path;
-      const token = localStorage.getItem("token");
 
       const res = await fetch(fullUrl, {
-        headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        credentials: "include", // Important: sends cookies with request
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {

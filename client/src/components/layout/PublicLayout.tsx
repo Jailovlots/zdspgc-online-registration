@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
+
 interface PublicLayoutProps {
   children: React.ReactNode;
 }
@@ -58,11 +59,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </p>
           </div>
 
+
+
           <div>
             <h4 className="font-bold mb-4 text-white">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-secondary transition-colors">Student Portal</a></li>
-              <li><a href="#" className="hover:text-secondary transition-colors">Faculty Portal</a></li>
+              <li><Link href="/login"><a className="hover:text-secondary transition-colors">Student Portal</a></Link></li>
+
               <li><a href="#" className="hover:text-secondary transition-colors">Academic Calendar</a></li>
               <li><a href="#" className="hover:text-secondary transition-colors">Library</a></li>
             </ul>

@@ -22,6 +22,9 @@ export default function StudentRegistration() {
   const { user } = useAuth();
   const student = (user as any)?.student;
   const [step, setStep] = useState(1);
+  const [firstName, setFirstName] = useState<string | undefined>(student?.firstName ?? "");
+  const [lastName, setLastName] = useState<string | undefined>(student?.lastName ?? "");
+  const [avatar, setAvatar] = useState<string | undefined>(student?.avatar ?? "");
   const [sex, setSex] = useState<string | undefined>(student?.sex ?? "");
   const [civilStatus, setCivilStatus] = useState<string | undefined>(student?.civilStatus ?? "");
   const [placeOfBirth, setPlaceOfBirth] = useState<string | undefined>(student?.placeOfBirth ?? "");
@@ -32,6 +35,7 @@ export default function StudentRegistration() {
   const [middleInitial, setMiddleInitial] = useState<string | undefined>(student?.middleInitial ?? "");
   const [suffix, setSuffix] = useState<string | undefined>(student?.suffix ?? "");
   const [dob, setDob] = useState<string | undefined>(student?.dob ?? "");
+  const [contactNumber, setContactNumber] = useState<string | undefined>(student?.contactNumber ?? "");
 
   const [fatherName, setFatherName] = useState<string | undefined>(student?.fatherName ?? "");
   const [fatherContact, setFatherContact] = useState<string | undefined>(student?.fatherContact ?? "");
@@ -99,6 +103,13 @@ export default function StudentRegistration() {
     }
   }, [subjects]);
 
+  // Sync avatar state when student data updates
+  useEffect(() => {
+    if (student?.avatar) {
+      setAvatar(student.avatar);
+    }
+  }, [student?.avatar]);
+
   const enrollMutation = useMutation({
     mutationFn: async (subjectIds: number[]) => {
       await apiRequest("POST", "/api/enroll", { subjectIds });
@@ -145,7 +156,23 @@ export default function StudentRegistration() {
     }
   });
 
-  const handleNext = () => setStep(step + 1);
+  const handleNext = async () => {
+    if (step === 2) {
+      if (!selectedCourse || !selectedYear) {
+        toast({ title: "Selection Required", description: "Please select both a course and a year level.", variant: "destructive" });
+        return;
+      }
+      try {
+        await updateStudentMutation.mutateAsync({
+          courseId: parseInt(selectedCourse),
+          yearLevel: parseInt(selectedYear)
+        });
+      } catch (error) {
+        return; // Stop if save fails
+      }
+    }
+    setStep(step + 1);
+  };
   const handleBack = () => setStep(step - 1);
 
   const handleSaveAndNext = async () => {
@@ -226,8 +253,8 @@ export default function StudentRegistration() {
 
     // Save student info on step 1 - FORCE UPPERCASE
     const payload: any = {
-      firstName: student?.firstName?.toUpperCase(),
-      lastName: student?.lastName?.toUpperCase(),
+      firstName: firstName?.toUpperCase(),
+      lastName: lastName?.toUpperCase(),
       middleInitial: middleInitial?.toUpperCase(),
       suffix: suffix?.toUpperCase(),
       dob,
@@ -238,6 +265,7 @@ export default function StudentRegistration() {
       religion: religion?.toUpperCase(),
       permanentAddress: permanentAddress?.toUpperCase(),
       postalCode: postalCode?.toUpperCase(),
+      contactNumber,
       fatherName: fatherName?.toUpperCase(),
       fatherContact: fatherContact?.toUpperCase(),
       fatherOccupation: fatherOccupation?.toUpperCase(),
@@ -353,11 +381,13 @@ export default function StudentRegistration() {
                   </CardHeader>
                   <CardContent className="pt-6 bg-slate-100/50 flex justify-center overflow-x-auto">
                     <AdmissionForm
+                      studentId={student.id}
                       pledgeAccepted={pledgeAccepted}
                       onPledgeToggle={setPledgeAccepted}
                       formData={{
-                        firstName: student.firstName,
-                        lastName: student.lastName,
+                        firstName,
+                        lastName,
+                        avatar,
                         middleInitial,
                         suffix,
                         dob,
@@ -368,6 +398,7 @@ export default function StudentRegistration() {
                         religion,
                         permanentAddress,
                         postalCode,
+                        contactNumber,
                         fatherName,
                         fatherContact,
                         fatherOccupation,
@@ -399,6 +430,9 @@ export default function StudentRegistration() {
                       }}
                       onChange={(field, value) => {
                         const setters: Record<string, any> = {
+                          firstName: setFirstName,
+                          lastName: setLastName,
+                          avatar: setAvatar,
                           middleInitial: setMiddleInitial,
                           suffix: setSuffix,
                           dob: setDob,
@@ -409,6 +443,7 @@ export default function StudentRegistration() {
                           religion: setReligion,
                           permanentAddress: setPermanentAddress,
                           postalCode: setPostalCode,
+                          contactNumber: setContactNumber,
                           fatherName: setFatherName,
                           fatherContact: setFatherContact,
                           fatherOccupation: setFatherOccupation,

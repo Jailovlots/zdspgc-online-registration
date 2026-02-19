@@ -9,7 +9,8 @@ import {
   FileCheck,
   Bell,
   Settings,
-  LogOut
+  LogOut,
+  BarChart3
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -18,6 +19,7 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
   const isActive = (path: string) => location === path;
 
   function LogoutButton() {
@@ -104,6 +106,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           <div className="text-xs font-semibold text-slate-500 mt-6 mb-2 px-2 uppercase tracking-wider">System</div>
 
+          <Link href="/admin/reports">
+            <Button
+              variant="ghost"
+              className={`w-full justify-start gap-3 ${isActive("/admin/reports") ? "bg-primary text-white hover:bg-primary/90 hover:text-white" : "hover:bg-slate-800 hover:text-white"}`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Reports
+            </Button>
+          </Link>
+
           <Link href="/admin/settings">
             <Button
               variant="ghost"
@@ -129,12 +141,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 location === '/admin/enrollments' ? 'Enrollment Management' :
                   location === '/admin/courses' ? 'Curriculum Management' :
                     location === '/admin/notifications' ? 'Notifications' :
-                      'Admin Console'}
+                      location === '/admin/reports' ? 'Reports & Analytics' :
+                        'Admin Console'}
           </h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-600">Administrator</span>
+            <span className="text-sm font-medium text-slate-600">{user?.username || "Administrator"}</span>
             <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-slate-200">
-              <AvatarFallback className="bg-slate-800 text-white">AD</AvatarFallback>
+              {user?.avatar ? (
+                <AvatarImage src={user.avatar} alt={user.username} />
+              ) : null}
+              <AvatarFallback className="bg-slate-800 text-white">
+                {user?.username?.[0]?.toUpperCase() || "AD"}
+              </AvatarFallback>
             </Avatar>
           </div>
         </header>

@@ -1,17 +1,18 @@
 import { createContext, ReactNode, useContext } from "react";
 import Swal from "sweetalert2";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { type InsertUser, type User } from "@shared/schema";
+import { type InsertUser, type UserWithStudent } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
-    user: User | null;
+    user: UserWithStudent | null;
     isLoading: boolean;
     error: Error | null;
     loginMutation: any;
     logoutMutation: any;
     registerMutation: any;
+    refetchUser: () => Promise<any>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -24,7 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: user,
         error,
         isLoading,
-    } = useQuery<User | undefined, Error>({
+        refetch: refetchUser,
+    } = useQuery<UserWithStudent | undefined, Error>({
         queryKey: ["/api/user"],
         retry: false,
         staleTime: Infinity
@@ -37,10 +39,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[Auth] Login response status:", res.status);
             return await res.json();
         },
-        onSuccess: (user: User) => {
+        onSuccess: (user: UserWithStudent) => {
             console.log("[Auth] Login successful:", user.username);
             queryClient.setQueryData(["/api/user"], user);
-            
+
+            // Redirect based on role
+            if (user.role === "admin") {
+                // Use window.location for hard redirect if needed, or location hook if available in context
+                // Since this hook is used inside Router context in App.tsx, we can't easily access location here
+                // But App.tsx ProtectedRoute will handle the redirect if we just let the state update
+                // However, for better UX on login page:
+                window.location.href = "/admin/dashboard";
+            } else {
+                window.location.href = "/student/dashboard";
+            }
+
             // Show SweetAlert success
             Swal.fire({
                 title: "Login Successful!",
@@ -49,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 timer: 2000,
                 showConfirmButton: false,
             });
-            
+
             // Also show toast
             toast({
                 title: "Login successful",
@@ -58,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         onError: (error: Error) => {
             console.error("[Auth] Login failed:", error.message);
-            
+
             // Show SweetAlert error
             Swal.fire({
                 title: "Login Failed",
@@ -67,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 confirmButtonText: "Try Again",
                 confirmButtonColor: "#0f172a",
             });
-            
+
             toast({
                 title: "Login failed",
                 description: error.message,
@@ -83,10 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("[Auth] Registration response status:", res.status);
             return await res.json();
         },
-        onSuccess: (user: User) => {
+        onSuccess: (user: UserWithStudent) => {
             console.log("[Auth] Registration successful:", user.username);
             queryClient.setQueryData(["/api/user"], user);
-            
+
             // Show SweetAlert success
             Swal.fire({
                 title: "Registration Successful!",
@@ -95,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 timer: 2000,
                 showConfirmButton: false,
             });
-            
+
             toast({
                 title: "Registration successful",
                 description: "Your account has been created.",
@@ -103,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         onError: (error: Error) => {
             console.error("[Auth] Registration failed:", error.message);
-            
+
             // Show SweetAlert error
             Swal.fire({
                 title: "Registration Failed",
@@ -112,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 confirmButtonText: "Try Again",
                 confirmButtonColor: "#0f172a",
             });
-            
+
             toast({
                 title: "Registration failed",
                 description: error.message,
@@ -129,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             queryClient.setQueryData(["/api/user"], null);
             // ensure any cached user queries are invalidated (typed overload)
             queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-            
+
             // Show SweetAlert success
             Swal.fire({
                 title: "Logged Out",
@@ -138,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 timer: 1500,
                 showConfirmButton: false,
             });
-            
+
             toast({
                 title: "Logged out",
                 description: "You have been logged out successfully.",
@@ -162,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 loginMutation,
                 logoutMutation,
                 registerMutation,
+                refetchUser,
             }}
         >
             {children}

@@ -3,6 +3,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { User, Upload } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AdmissionFormProps {
     formData: any;
@@ -10,9 +14,50 @@ interface AdmissionFormProps {
     pledgeAccepted: boolean;
     onPledgeToggle: (checked: boolean) => void;
     readOnly?: boolean;
+    studentId?: number;
+    onFileSelect?: (file: File) => void;
 }
 
-export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeToggle, readOnly = false }: AdmissionFormProps) {
+export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeToggle, readOnly = false, studentId, onFileSelect }: AdmissionFormProps) {
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // If no studentId (creating new student), just pass the file up to parent
+        if (!studentId) {
+            // Create a preview URL
+            const previewUrl = URL.createObjectURL(file);
+            onChange("avatar", previewUrl);
+
+            // Pass the actual file to parent component if onFileSelect is provided
+            if (onFileSelect) {
+                onFileSelect(file);
+            }
+            return;
+        }
+
+        const uploadData = new FormData();
+        uploadData.append("file", file);
+        uploadData.append("field", "avatar");
+
+        try {
+            const res = await fetch(`/api/students/${studentId}/upload`, {
+                method: "POST",
+                body: uploadData,
+            });
+            if (!res.ok) throw new Error("Upload failed");
+            const data = await res.json();
+            onChange("avatar", data.url);
+            queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            toast({ title: "Success", description: "Photo uploaded successfully" });
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+        }
+    };
+
     return (
         <div className="max-w-[850px] mx-auto bg-white shadow-2xl p-8 md:p-12 border border-slate-200 min-h-[1100px] font-sans">
             {/* Header */}
@@ -35,78 +80,114 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                 <section>
                     <h3 className="text-lg font-bold border-l-4 border-slate-900 pl-3 mb-4 uppercase bg-slate-50 py-1">I. Personal Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Last Name</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.lastName || ""} readOnly />
-                        </div>
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">First Name</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.firstName || ""} readOnly />
-                        </div>
-                        <div className="md:col-span-1 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">M.I.</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.middleInitial || ""} onChange={(e) => onChange("middleInitial", e.target.value)} readOnly={readOnly} />
-                        </div>
-                        <div className="md:col-span-1 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Suffix</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.suffix || ""} onChange={(e) => onChange("suffix", e.target.value)} readOnly={readOnly} />
+                        {/* Name Fields - Left Side */}
+                        <div className="md:col-span-5">
+                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Last Name</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.lastName || ""} onChange={(e) => onChange("lastName", e.target.value.toUpperCase())} readOnly={readOnly} />
+                                </div>
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">First Name</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.firstName || ""} onChange={(e) => onChange("firstName", e.target.value.toUpperCase())} readOnly={readOnly} />
+                                </div>
+                                <div className="md:col-span-1 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">M.I.</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.middleInitial || ""} onChange={(e) => onChange("middleInitial", e.target.value.toUpperCase())} readOnly={readOnly} />
+                                </div>
+                                <div className="md:col-span-1 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Suffix</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.suffix || ""} onChange={(e) => onChange("suffix", e.target.value.toUpperCase())} readOnly={readOnly} />
+                                </div>
+
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Date of Birth</Label>
+                                    <Input type="date" className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.dob || ""} onChange={(e) => onChange("dob", e.target.value)} readOnly={readOnly} />
+                                </div>
+                                <div className="md:col-span-1 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Sex</Label>
+                                    <Select value={formData.sex} onValueChange={(v) => onChange("sex", v)} disabled={readOnly}>
+                                        <SelectTrigger className="border-0 border-b border-slate-300 rounded-none px-0 h-8 flex items-center focus:ring-0 shadow-none bg-transparent">
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Male">Male</SelectItem>
+                                            <SelectItem value="Female">Female</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="md:col-span-1 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Civil Status</Label>
+                                    <Select value={formData.civilStatus} onValueChange={(v) => onChange("civilStatus", v)} disabled={readOnly}>
+                                        <SelectTrigger className="border-0 border-b border-slate-300 rounded-none px-0 h-8 flex items-center focus:ring-0 shadow-none bg-transparent">
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Single">Single</SelectItem>
+                                            <SelectItem value="Married">Married</SelectItem>
+                                            <SelectItem value="Widowed">Widowed</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Place of Birth</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.placeOfBirth || ""} onChange={(e) => onChange("placeOfBirth", e.target.value.toUpperCase())} />
+                                </div>
+
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Citizenship</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.citizenship || ""} onChange={(e) => onChange("citizenship", e.target.value.toUpperCase())} />
+                                </div>
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Religion</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.religion || ""} onChange={(e) => onChange("religion", e.target.value.toUpperCase())} />
+                                </div>
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Postal Code</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.postalCode || ""} onChange={(e) => onChange("postalCode", e.target.value.toUpperCase())} />
+                                </div>
+
+                                <div className="md:col-span-4 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Contact Number</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.contactNumber || ""} onChange={(e) => onChange("contactNumber", e.target.value)} readOnly={readOnly} />
+                                </div>
+
+                                <div className="md:col-span-6 space-y-1.5">
+                                    <Label className="text-[10px] uppercase font-bold text-slate-500">Permanent Address</Label>
+                                    <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.permanentAddress || ""} onChange={(e) => onChange("permanentAddress", e.target.value.toUpperCase())} readOnly={readOnly} />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Date of Birth</Label>
-                            <Input type="date" className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.dob || ""} onChange={(e) => onChange("dob", e.target.value)} readOnly={readOnly} />
-                        </div>
-                        <div className="md:col-span-1 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Sex</Label>
-                            <Select value={formData.sex} onValueChange={(v) => onChange("sex", v)} disabled={readOnly}>
-                                <SelectTrigger className="border-0 border-b border-slate-300 rounded-none px-0 h-8 flex items-center focus:ring-0 shadow-none bg-transparent">
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Male">Male</SelectItem>
-                                    <SelectItem value="Female">Female</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="md:col-span-1 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Civil Status</Label>
-                            <Select value={formData.civilStatus} onValueChange={(v) => onChange("civilStatus", v)} disabled={readOnly}>
-                                <SelectTrigger className="border-0 border-b border-slate-300 rounded-none px-0 h-8 flex items-center focus:ring-0 shadow-none bg-transparent">
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Single">Single</SelectItem>
-                                    <SelectItem value="Married">Married</SelectItem>
-                                    <SelectItem value="Widowed">Widowed</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Place of Birth</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.placeOfBirth || ""} onChange={(e) => onChange("placeOfBirth", e.target.value)} />
-                        </div>
-
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Citizenship</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.citizenship || ""} onChange={(e) => onChange("citizenship", e.target.value)} />
-                        </div>
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Religion</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.religion || ""} onChange={(e) => onChange("religion", e.target.value)} />
-                        </div>
-                        <div className="md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Postal Code</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.postalCode || ""} onChange={(e) => onChange("postalCode", e.target.value)} />
-                        </div>
-
-                        <div className="md:col-span-4 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Contact Number</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.contactNumber || ""} onChange={(e) => onChange("contactNumber", e.target.value)} readOnly={readOnly} />
-                        </div>
-
-                        <div className="md:col-span-6 space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold text-slate-500">Permanent Address</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.permanentAddress || ""} onChange={(e) => onChange("permanentAddress", e.target.value)} readOnly={readOnly} />
+                        {/* Photo Upload - Upper Right */}
+                        <div className="md:col-span-1 md:row-span-3 space-y-2">
+                            <Label className="text-[10px] uppercase font-bold text-slate-500">2x2 Photo</Label>
+                            <div className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-md flex items-center justify-center overflow-hidden bg-slate-50 hover:border-slate-400 transition-colors">
+                                {formData.avatar ? (
+                                    <img src={formData.avatar} alt="Student" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="h-12 w-12 text-slate-300" />
+                                )}
+                            </div>
+                            <input
+                                type="file"
+                                id="avatar-upload"
+                                className="hidden"
+                                accept=".jpg,.jpeg,.png"
+                                onChange={handlePhotoUpload}
+                                disabled={readOnly}
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="w-full text-[10px] h-7"
+                                onClick={() => document.getElementById('avatar-upload')?.click()}
+                                disabled={readOnly}
+                            >
+                                <Upload className="h-3 w-3 mr-1" />
+                                Upload
+                            </Button>
                         </div>
                     </div>
                 </section>
@@ -120,11 +201,11 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             <div className="md:col-span-4 font-bold text-xs uppercase text-slate-400">Father's Information</div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Name</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherName || ""} onChange={(e) => onChange("fatherName", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherName || ""} onChange={(e) => onChange("fatherName", e.target.value.toUpperCase())} />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Occupation</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherOccupation || ""} onChange={(e) => onChange("fatherOccupation", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherOccupation || ""} onChange={(e) => onChange("fatherOccupation", e.target.value.toUpperCase())} />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Contact No.</Label>
@@ -132,11 +213,11 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             </div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Company/Employer</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherCompany || ""} onChange={(e) => onChange("fatherCompany", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherCompany || ""} onChange={(e) => onChange("fatherCompany", e.target.value.toUpperCase())} />
                             </div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Home Address</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherHomeAddress || ""} onChange={(e) => onChange("fatherHomeAddress", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.fatherHomeAddress || ""} onChange={(e) => onChange("fatherHomeAddress", e.target.value.toUpperCase())} />
                             </div>
                         </div>
 
@@ -145,11 +226,11 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             <div className="md:col-span-4 font-bold text-xs uppercase text-slate-400">Mother's Information</div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Name</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherName || ""} onChange={(e) => onChange("motherName", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherName || ""} onChange={(e) => onChange("motherName", e.target.value.toUpperCase())} />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Occupation</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherOccupation || ""} onChange={(e) => onChange("motherOccupation", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherOccupation || ""} onChange={(e) => onChange("motherOccupation", e.target.value.toUpperCase())} />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Contact No.</Label>
@@ -157,11 +238,11 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             </div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Company/Employer</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherCompany || ""} onChange={(e) => onChange("motherCompany", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherCompany || ""} onChange={(e) => onChange("motherCompany", e.target.value.toUpperCase())} />
                             </div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Home Address</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherHomeAddress || ""} onChange={(e) => onChange("motherHomeAddress", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.motherHomeAddress || ""} onChange={(e) => onChange("motherHomeAddress", e.target.value.toUpperCase())} />
                             </div>
                         </div>
 
@@ -171,14 +252,14 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             <div className="font-bold text-xs uppercase text-slate-400">Relationship</div>
                             <div className="md:col-span-3 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Name</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianName || ""} onChange={(e) => onChange("guardianName", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianName || ""} onChange={(e) => onChange("guardianName", e.target.value.toUpperCase())} />
                             </div>
                             <div className="space-y-1">
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" placeholder="e.g. Aunt" value={formData.guardianRelationship || ""} onChange={(e) => onChange("guardianRelationship", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" placeholder="e.g. Aunt" value={formData.guardianRelationship || ""} onChange={(e) => onChange("guardianRelationship", e.target.value.toUpperCase())} />
                             </div>
                             <div className="md:col-span-2 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Occupation</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianOccupation || ""} onChange={(e) => onChange("guardianOccupation", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianOccupation || ""} onChange={(e) => onChange("guardianOccupation", e.target.value.toUpperCase())} />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Contact No.</Label>
@@ -186,11 +267,11 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Company</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianCompany || ""} onChange={(e) => onChange("guardianCompany", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianCompany || ""} onChange={(e) => onChange("guardianCompany", e.target.value.toUpperCase())} />
                             </div>
                             <div className="md:col-span-4 space-y-1">
                                 <Label className="text-[10px] uppercase text-slate-500">Home Address</Label>
-                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianHomeAddress || ""} onChange={(e) => onChange("guardianHomeAddress", e.target.value)} />
+                                <Input className="border-0 border-b border-slate-200 rounded-none h-7 px-0 focus-visible:ring-0 text-sm bg-transparent shadow-none" value={formData.guardianHomeAddress || ""} onChange={(e) => onChange("guardianHomeAddress", e.target.value.toUpperCase())} />
                             </div>
                         </div>
                     </div>
@@ -202,11 +283,11 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border border-slate-100 rounded-md">
                         <div className="space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Contact Person</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.emergencyContactPerson || ""} onChange={(e) => onChange("emergencyContactPerson", e.target.value)} />
+                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.emergencyContactPerson || ""} onChange={(e) => onChange("emergencyContactPerson", e.target.value.toUpperCase())} />
                         </div>
                         <div className="space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Home Address</Label>
-                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.emergencyContactHome || ""} onChange={(e) => onChange("emergencyContactHome", e.target.value)} />
+                            <Input className="border-0 border-b border-slate-300 rounded-none px-0 focus-visible:ring-0 shadow-none h-8 bg-transparent" value={formData.emergencyContactHome || ""} onChange={(e) => onChange("emergencyContactHome", e.target.value.toUpperCase())} />
                         </div>
                         <div className="space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold text-slate-500">Contact Number</Label>
@@ -231,20 +312,20 @@ export function AdmissionForm({ formData, onChange, pledgeAccepted, onPledgeTogg
                             <tbody className="divide-y text-black">
                                 <tr>
                                     <td className="p-3 font-bold text-xs bg-slate-50/50">Elementary</td>
-                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.elementarySchool || ""} onChange={(e) => onChange("elementarySchool", e.target.value)} /></td>
-                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.elementaryAddress || ""} onChange={(e) => onChange("elementaryAddress", e.target.value)} /></td>
+                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.elementarySchool || ""} onChange={(e) => onChange("elementarySchool", e.target.value.toUpperCase())} /></td>
+                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.elementaryAddress || ""} onChange={(e) => onChange("elementaryAddress", e.target.value.toUpperCase())} /></td>
                                     <td className="p-2"><Input type="number" className="h-8 border-none focus-visible:ring-0 text-xs px-0 text-center bg-transparent shadow-none" value={formData.elementaryYearGraduated || ""} onChange={(e) => onChange("elementaryYearGraduated", parseInt(e.target.value) || 0)} /></td>
                                 </tr>
                                 <tr>
                                     <td className="p-3 font-bold text-xs bg-slate-50/50">Junior High</td>
-                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.juniorHighSchool || ""} onChange={(e) => onChange("juniorHighSchool", e.target.value)} /></td>
-                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.juniorHighAddress || ""} onChange={(e) => onChange("juniorHighAddress", e.target.value)} /></td>
+                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.juniorHighSchool || ""} onChange={(e) => onChange("juniorHighSchool", e.target.value.toUpperCase())} /></td>
+                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.juniorHighAddress || ""} onChange={(e) => onChange("juniorHighAddress", e.target.value.toUpperCase())} /></td>
                                     <td className="p-2"><Input type="number" className="h-8 border-none focus-visible:ring-0 text-xs px-0 text-center bg-transparent shadow-none" value={formData.juniorHighYearGraduated || ""} onChange={(e) => onChange("juniorHighYearGraduated", parseInt(e.target.value) || 0)} /></td>
                                 </tr>
                                 <tr>
                                     <td className="p-3 font-bold text-xs bg-slate-50/50">Senior High</td>
-                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.seniorHighSchool || ""} onChange={(e) => onChange("seniorHighSchool", e.target.value)} /></td>
-                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.seniorHighAddress || ""} onChange={(e) => onChange("seniorHighAddress", e.target.value)} /></td>
+                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.seniorHighSchool || ""} onChange={(e) => onChange("seniorHighSchool", e.target.value.toUpperCase())} /></td>
+                                    <td className="p-2"><Input className="h-8 border-none focus-visible:ring-0 text-xs px-0 bg-transparent shadow-none" value={formData.seniorHighAddress || ""} onChange={(e) => onChange("seniorHighAddress", e.target.value.toUpperCase())} /></td>
                                     <td className="p-2"><Input type="number" className="h-8 border-none focus-visible:ring-0 text-xs px-0 text-center bg-transparent shadow-none" value={formData.seniorHighYearGraduated || ""} onChange={(e) => onChange("seniorHighYearGraduated", parseInt(e.target.value) || 0)} /></td>
                                 </tr>
                             </tbody>

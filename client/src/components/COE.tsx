@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Printer, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { printComponent } from "@/lib/print-utils";
 
 interface COEProps {
     student: Student;
@@ -38,42 +39,7 @@ export function COE({ student, course, isAdmin = false }: COEProps) {
     };
 
     const handlePrint = () => {
-        const printContent = printRef.current;
-        if (!printContent) return;
-
-        const windowPrint = window.open('', '', 'width=900,height=600');
-        if (!windowPrint) return;
-
-        windowPrint.document.write(`
-      <html>
-        <head>
-          <title>CERTIFICATE OF ENROLLMENT - ${student.lastName.toUpperCase()}</title>
-          <style>
-            body { font-family: 'Times New Roman', serif; padding: 40px; text-transform: uppercase; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-            .college-name { font-size: 24px; font-weight: bold; margin: 0; }
-            .document-title { font-size: 20px; font-weight: bold; margin-top: 20px; text-decoration: underline; }
-            .info-section { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-            .info-item { margin-bottom: 5px; }
-            .label { font-weight: bold; width: 150px; display: inline-block; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-            .footer { margin-top: 50px; display: flex; justify-content: space-between; }
-            .signature { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
-            @media print {
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent.innerHTML}
-          <script>
-            window.onload = function() { window.print(); window.close(); }
-          </script>
-        </body>
-      </html>
-    `);
-        windowPrint.document.close();
+        printComponent(printRef, `CERTIFICATE OF ENROLLMENT - ${student.lastName}`);
     };
 
     return (

@@ -23,6 +23,8 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(userId: number, updates: Partial<User>): Promise<User>;
+  updateUserAvatar(userId: number, avatarUrl: string): Promise<void>;
 
   createStudent(userId: number, student: InsertStudent): Promise<Student>;
   updateStudent(id: number, student: Partial<Student>): Promise<Student>;
@@ -54,6 +56,12 @@ export interface IStorage {
   logLoginAttempt(attempt: InsertLoginAttempt): Promise<LoginAttempt>;
   getRecentLoginAttempts(userId: number, limit?: number): Promise<LoginAttempt[]>;
 
+  // Report methods
+  getEnrollmentStats(): Promise<any>;
+  getEnrollmentTrends(startDate?: Date, endDate?: Date): Promise<any[]>;
+  getStudentDemographics(): Promise<any>;
+  getCourseAnalytics(): Promise<any>;
+
   seed(): Promise<void>;
 }
 
@@ -70,6 +78,31 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserAvatar(userId: number, avatarUrl: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ avatar: avatarUrl } as any)
+      .where(eq(users.id, userId));
+  }
+
+  async updateUser(userId: number, updates: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) throw new Error("User not found");
     return user;
   }
 
@@ -184,13 +217,7 @@ export class DatabaseStorage implements IStorage {
       });
     }
 
-    // Auto-update student status to enrolled if not already
-    const [student] = await db.select().from(students).where(eq(students.id, studentId));
-    if (student && student.status === "pending") {
-      await db.update(students)
-        .set({ status: "enrolled" })
-        .where(eq(students.id, studentId));
-    }
+
   }
 
   async deleteStudent(id: number): Promise<void> {
@@ -321,6 +348,81 @@ export class DatabaseStorage implements IStorage {
         console.log("[Storage] Admin user verified/updated");
       }
 
+      // Create test student user if it doesn't exist
+      const [existingStudent] = await db.select().from(users).where(eq(users.username, "student@test.com"));
+      const studentPassword = await import("./auth").then(m => m.hashPassword("student123"));
+
+      if (!existingStudent) {
+        console.log("[Storage] Creating test student user...");
+        const [testUser] = await db.insert(users).values({
+          username: "student@test.com",
+          password: studentPassword,
+          role: "student"
+        }).returning();
+
+        // Create corresponding student profile
+        await db.insert(students).values({
+          userId: testUser.id,
+          studentId: "2024-TEST-001",
+          firstName: "Juan",
+          lastName: "Dela Cruz",
+          email: "student@test.com",
+          yearLevel: 1,
+          status: "pending",
+          middleInitial: "P",
+          suffix: "",
+          dob: "2000-01-01",
+          sex: "Male",
+          civilStatus: "Single",
+          placeOfBirth: "Manila",
+          citizenship: "Filipino",
+          religion: "Catholic",
+          permanentAddress: "123 Test Street, Manila",
+          postalCode: "1000",
+          contactNumber: "09123456789",
+          courseId: null,
+          section: "",
+          strand: "",
+          fatherName: "",
+          fatherContact: "",
+          fatherOccupation: "",
+          fatherCompany: "",
+          fatherHomeAddress: "",
+          motherName: "",
+          motherContact: "",
+          motherOccupation: "",
+          motherCompany: "",
+          motherHomeAddress: "",
+          guardianName: "",
+          guardianContact: "",
+          guardianRelationship: "",
+          guardianOccupation: "",
+          guardianCompany: "",
+          guardianHomeAddress: "",
+          emergencyContactPerson: "",
+          emergencyContactHome: "",
+          emergencyContactNumber: "",
+          elementarySchool: "",
+          elementaryAddress: "",
+          elementaryYearGraduated: 0,
+          juniorHighSchool: "",
+          juniorHighAddress: "",
+          juniorHighYearGraduated: 0,
+          seniorHighSchool: "",
+          seniorHighAddress: "",
+          seniorHighYearGraduated: 0,
+          previousSchool: "",
+          yearGraduated: 0,
+        });
+        console.log("[Storage] Test student created (email: student@test.com, password: student123)");
+      } else {
+        // Update student password to ensure it's hashed correctly (fix for legacy plain text)
+        await db.update(users)
+          .set({ password: studentPassword })
+          .where(eq(users.username, "student@test.com"));
+        console.log("[Storage] Test student user verified/updated");
+      }
+
       if (existingCourses.length > 0) {
         console.log("[Storage] Courses already seeded, skipping...");
         return; // Already seeded courses/subjects
@@ -391,6 +493,124 @@ export class DatabaseStorage implements IStorage {
       console.error("[Storage] Database seed failed:", error);
       throw error;
     }
+  }
+
+  // Report Methods
+  async getEnrollmentStats(): Promise<any> {
+    const allStudents = await db.select().from(students);
+
+    const stats = {
+      total: allStudents.length,
+      byStatus: {} as Record<string, number>,
+      byYearLevel: {} as Record<number, number>,
+      byProgram: [] as { programId: number | null, count: number }[]
+    };
+
+    // Count by status
+    allStudents.forEach((s: Student) => {
+      stats.byStatus[s.status] = (stats.byStatus[s.status] || 0) + 1;
+    });
+
+    // Count by year level
+    allStudents.forEach((s: Student) => {
+      stats.byYearLevel[s.yearLevel] = (stats.byYearLevel[s.yearLevel] || 0) + 1;
+    });
+
+    // Count by program
+    const programCounts = new Map<number | null, number>();
+    allStudents.forEach((s: Student) => {
+      programCounts.set(s.courseId, (programCounts.get(s.courseId) || 0) + 1);
+    });
+    stats.byProgram = Array.from(programCounts.entries()).map(([programId, count]) => ({ programId, count }));
+
+    return stats;
+  }
+
+  async getEnrollmentTrends(startDate?: Date, endDate?: Date): Promise<any[]> {
+    // For now, return mock trend data
+    // In a real implementation, you'd query students with creation timestamps
+    const allStudents = await db.select().from(students);
+
+    // Group by month (simplified - in production you'd use actual timestamps)
+    const monthlyData = [
+      { date: '2024-01', count: Math.floor(allStudents.length * 0.1) },
+      { date: '2024-02', count: Math.floor(allStudents.length * 0.15) },
+      { date: '2024-03', count: Math.floor(allStudents.length * 0.2) },
+      { date: '2024-04', count: Math.floor(allStudents.length * 0.25) },
+      { date: '2024-05', count: Math.floor(allStudents.length * 0.3) },
+      { date: '2024-06', count: allStudents.length },
+    ];
+
+    return monthlyData;
+  }
+
+  async getStudentDemographics(): Promise<any> {
+    const allStudents = await db.select().from(students);
+
+    const demographics = {
+      byGender: {} as Record<string, number>,
+      bySection: [] as { section: string, count: number }[],
+      byCivilStatus: {} as Record<string, number>
+    };
+
+    // Count by gender
+    allStudents.forEach((s: Student) => {
+      if (s.sex) {
+        demographics.byGender[s.sex] = (demographics.byGender[s.sex] || 0) + 1;
+      }
+    });
+
+    // Count by section
+    const sectionCounts = new Map<string, number>();
+    allStudents.forEach((s: Student) => {
+      if (s.section) {
+        sectionCounts.set(s.section, (sectionCounts.get(s.section) || 0) + 1);
+      }
+    });
+    demographics.bySection = Array.from(sectionCounts.entries()).map(([section, count]) => ({ section, count }));
+
+    // Count by civil status
+    allStudents.forEach((s: Student) => {
+      if (s.civilStatus) {
+        demographics.byCivilStatus[s.civilStatus] = (demographics.byCivilStatus[s.civilStatus] || 0) + 1;
+      }
+    });
+
+    return demographics;
+  }
+
+  async getCourseAnalytics(): Promise<any> {
+    const allCourses = await db.select().from(courses);
+    const allSubjects = await db.select().from(subjects);
+    const allEnrollments = await db.select().from(enrollments);
+    const allStudents = await db.select().from(students);
+
+    // Count students per course
+    const courseEnrollments = allCourses.map((course: Course) => {
+      const count = allStudents.filter((s: Student) => s.courseId === course.id).length;
+      return {
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        enrollmentCount: count
+      };
+    });
+
+    // Count enrollments per subject
+    const subjectEnrollments = allSubjects.map((subject: Subject) => {
+      const count = allEnrollments.filter((e: Enrollment) => e.subjectId === subject.id).length;
+      return {
+        id: subject.id,
+        name: subject.name,
+        code: subject.code,
+        enrollmentCount: count
+      };
+    });
+
+    return {
+      courses: courseEnrollments,
+      subjects: subjectEnrollments.sort((a: { enrollmentCount: number }, b: { enrollmentCount: number }) => b.enrollmentCount - a.enrollmentCount).slice(0, 10) // Top 10
+    };
   }
 }
 

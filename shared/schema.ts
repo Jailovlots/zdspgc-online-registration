@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("student"), // student, admin
+  avatar: text("avatar"), // Profile picture URL
 }, (table) => {
   return {
     usernameIdx: index("username_idx").on(table.username),
@@ -227,4 +228,9 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type InsertLoginAttempt = z.infer<typeof insertLoginAttemptSchema>;
+
+// Extended User type that includes the student relation (returned by /api/user for student users)
+export type UserWithStudent = User & {
+  student?: Student;
+};
 
